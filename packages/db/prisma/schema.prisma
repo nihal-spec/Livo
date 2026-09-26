@@ -1,0 +1,631 @@
+// Livo — Prisma schema (MVP subset of DATABASE_DESIGN.md).
+// Geo columns use Unsupported("geography(...)") per ADR-003: Prisma has no
+// native PostGIS type, so geo reads/writes go through TypedSQL in
+// src/repositories/*.sql.ts, never through the generated client directly.
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["typedSql"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Enums
+// ---------------------------------------------------------------------------
+
+enum PlaceCategory {
+  ACCOMMODATION
+  FOOD
+  HOSPITAL
+  PHARMACY
+  DIAGNOSTICS
+  GROCERY
+  LAUNDRY
+  ATM
+  COWORKING
+  GYM
+  TRANSIT_HUB
+  OTHER
+}
+
+enum AccommodationKind {
+  PG
+  HOSTEL
+  COLIVING
+  ROOM_RENTAL
+  LODGE
+  HOTEL
+  SERVICE_APARTMENT
+  DORMITORY
+}
+
+enum Occupancy {
+  SINGLE
+  DOUBLE
+  TRIPLE
+  DORM_4PLUS
+  WHOLE_UNIT
+}
+
+enum GenderPolicy {
+  MEN
+  WOMEN
+  ANY
+  FAMILY
+}
+
+enum FoodKind {
+  MESS
+  TIFFIN
+  RESTAURANT
+  CLOUD_KITCHEN
+  MEAL_SUBSCRIPTION
+  GROCERY
+}
+
+enum PriceBasis {
+  PER_NIGHT
+  PER_WEEK
+  PER_MONTH
+  PER_MEAL
+  PER_DAY
+}
+
+enum PlaceStatus {
+  DRAFT
+  PENDING_REVIEW
+  PUBLISHED
+  UNVERIFIABLE
+  CLOSED
+  REJECTED
+}
+
+enum SourceType {
+  VERIFIED
+  PARTNER
+  API
+  ESTIMATED
+  USER
+  IMPORTED
+}
+
+enum TravelMode {
+  WALK
+  TWO_WHEELER
+  CAR
+  AUTO
+  CAB
+  BUS
+  METRO
+  WATER_METRO
+  MIXED_TRANSIT
+}
+
+enum PlanPurpose {
+  JOB_RELOCATION
+  INTERVIEW
+  STUDY
+  HOSPITAL_ATTENDANT
+  INTERNSHIP
+  TRAINING
+  BUSINESS
+  FAMILY_VISIT
+  WORKATION
+  TRIP
+  OTHER
+}
+
+// ---------------------------------------------------------------------------
+// Geo
+// ---------------------------------------------------------------------------
+
+model Region {
+  id       String  @id @default(cuid())
+  kind     String // CITY | AREA
+  slug     String  @unique
+  name     String
+  parentId String?
+  boundary Unsupported("geography(MultiPolygon,4326)")?
+  centroid Unsupported("geography(Point,4326)")
+
+  destinations Destination[]
+  places       Place[]
+  costAssumptions CostAssumption[]
+  fareRules    FareRule[]
+
+  @@map("region")
+}
+
+model Destination {
+  id              String   @id @default(cuid())
+  slug            String?  @unique // anchors only (SEO)
+  name            String
+  kind            String // OFFICE_PARK | HOSPITAL | COLLEGE | STATION | EVENT | CUSTOM
+  regionId        String
+  region          Region   @relation(fields: [regionId], references: [id])
+  location        Unsupported("geography(Point,4326)")
+  entrances       Json?
+  isAnchor        Boolean  @default(false)
+  externalPlaceId String?
+  createdByUserId String?
+  createdAt       DateTime @default(now())
+
+  travelEstimates TravelEstimate[]
+  plans           Plan[]
+
+  @@index([regionId])
+  @@map("destination")
+}
+
+// ---------------------------------------------------------------------------
+// Places
+// ---------------------------------------------------------------------------
+
+model Place {
+  id           String        @id @default(cuid())
+  slug         String        @unique
+  category     PlaceCategory
+  name         String
+  regionId     String
+  region       Region        @relation(fields: [regionId], references: [id])
+  location     Unsupported("geography(Point,4326)")
+  addressLine  String
+  landmark     String?
+  phoneE164    String?
+  whatsappE164 String?
+  website      String?
+  status       PlaceStatus   @default(DRAFT)
+  isSponsored  Boolean       @default(false)
+  attributes   Json?
+  openingHours Json?
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  createdById String?
+  updatedById String?
+  deletedAt   DateTime?
+  version     Int       @default(1)
+
+  accommodationDetail AccommodationDetail?
+  roomOptions         RoomOption[]
+  foodPlans           FoodPlan[]
+  amenities           PlaceAmenity[]
+  photos              PlacePhoto[]
+  provenances         FactProvenance[]
+  savedBy             SavedPlace[]
+  reports             Report[]
+  travelEstimatesFrom TravelEstimate[]
+
+  @@index([category, status])
+  @@index([regionId])
+  @@map("place")
+}
+
+model AccommodationDetail {
+  placeId       String       @id
+  place         Place        @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  kind          AccommodationKind
+  genderPolicy  GenderPolicy
+  foodIncluded  Boolean?
+  mealsIncluded String[]
+  minStayDays   Int?
+  noticeDays    Int?
+  curfew        String?
+  rules         String?
+
+  @@map("accommodation_detail")
+}
+
+model RoomOption {
+  id                  String     @id @default(cuid())
+  placeId             String
+  place               Place      @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  occupancy           Occupancy
+  ac                  Boolean
+  privateBath         Boolean
+  priceBasis          PriceBasis
+  pricePaise          BigInt
+  depositPaise        BigInt?
+  maintenancePaise    BigInt?
+  electricityIncluded Boolean?
+  availableBeds       Int?
+  provenanceId        String?
+
+  @@index([placeId])
+  @@index([pricePaise])
+  @@map("room_option")
+}
+
+model FoodPlan {
+  id              String     @id @default(cuid())
+  placeId         String
+  place           Place      @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  kind            FoodKind
+  meals           String[]
+  vegOnly         Boolean?
+  priceBasis      PriceBasis
+  pricePaise      BigInt
+  delivers        Boolean?
+  deliveryRadiusM Int?
+  timings         Json?
+  provenanceId    String?
+
+  @@map("food_plan")
+}
+
+model Amenity {
+  id    String @id @default(cuid())
+  key   String @unique
+  label String
+
+  places PlaceAmenity[]
+
+  @@map("amenity")
+}
+
+model PlaceAmenity {
+  placeId   String
+  place     Place   @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  amenityId String
+  amenity   Amenity @relation(fields: [amenityId], references: [id])
+
+  @@id([placeId, amenityId])
+  @@index([amenityId, placeId])
+  @@map("place_amenity")
+}
+
+model PlacePhoto {
+  id        String   @id @default(cuid())
+  placeId   String
+  place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  url       String
+  alt       String?
+  position  Int      @default(0)
+  createdAt DateTime @default(now())
+
+  @@map("place_photo")
+}
+
+model FactProvenance {
+  id             String     @id @default(cuid())
+  placeId        String
+  place          Place      @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  factKey        String
+  sourceType     SourceType
+  dataSourceId   String
+  dataSource     DataSource @relation(fields: [dataSourceId], references: [id])
+  observedAt     DateTime
+  verifiedAt     DateTime?
+  verifiedById   String?
+  method         String?
+  confidence     String
+  note           String?
+
+  @@index([placeId, factKey])
+  @@index([observedAt])
+  @@map("fact_provenance")
+}
+
+model TravelEstimate {
+  originPlaceId  String
+  originPlace    Place       @relation(fields: [originPlaceId], references: [id], onDelete: Cascade)
+  destinationId  String
+  destination    Destination @relation(fields: [destinationId], references: [id], onDelete: Cascade)
+  mode           TravelMode
+  departBand     String // PEAK_AM | OFFPEAK | PEAK_PM
+  durationSMin   Int
+  durationSMax   Int
+  distanceM      Int
+  farePaiseMin   BigInt?
+  farePaiseMax   BigInt?
+  method         String
+  computedAt     DateTime
+
+  @@id([originPlaceId, destinationId, mode, departBand])
+  @@index([destinationId, mode, durationSMin])
+  @@map("travel_estimate")
+}
+
+// ---------------------------------------------------------------------------
+// Auth / RBAC / Audit
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?
+  status        String    @default("ACTIVE") // ACTIVE | SUSPENDED | DELETION_PENDING
+  totpSecretEnc Bytes?
+  createdAt     DateTime  @default(now())
+  deletedAt     DateTime?
+
+  accounts   Account[]
+  sessions   Session[]
+  roles      UserRole[]
+  plans      Plan[]
+  savedPlaces SavedPlace[]
+
+  @@map("user")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  @@unique([provider, providerAccountId])
+  @@map("account")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires      DateTime
+
+  @@map("session")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_token")
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  key         String           @unique
+  name        String
+  permissions RolePermission[]
+  users       UserRole[]
+
+  @@map("role")
+}
+
+model RolePermission {
+  roleId     String
+  role       Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission String
+
+  @@id([roleId, permission])
+  @@map("role_permission")
+}
+
+model UserRole {
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  roleId      String
+  role        Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  grantedById String
+  grantedAt   DateTime @default(now())
+
+  @@id([userId, roleId])
+  @@map("user_role")
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  actorUserId String?
+  actorType   String // USER | ADMIN | SYSTEM | AI_TOOL
+  action      String
+  entityType  String
+  entityId    String
+  before      Json?
+  after       Json?
+  reason      String?
+  requestId   String
+  ipHash      String?
+  createdAt   DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorUserId, createdAt])
+  @@map("audit_log")
+}
+
+// ---------------------------------------------------------------------------
+// Guests / Plans / Budget
+// ---------------------------------------------------------------------------
+
+model GuestSession {
+  id               String   @id // sha256(cookie value)
+  createdAt        DateTime @default(now())
+  lastSeenAt       DateTime
+  expiresAt        DateTime
+  mergedIntoUserId String?
+  uaHash           String?
+
+  plans Plan[]
+
+  @@index([expiresAt])
+  @@map("guest_session")
+}
+
+model Plan {
+  id                 String        @id @default(cuid())
+  ownerUserId        String?
+  owner              User?         @relation(fields: [ownerUserId], references: [id])
+  guestSessionId     String?
+  guestSession       GuestSession? @relation(fields: [guestSessionId], references: [id])
+  title              String
+  purpose            PlanPurpose
+  destinationId      String
+  destination        Destination   @relation(fields: [destinationId], references: [id])
+  startDate          DateTime      @db.Date
+  endDate            DateTime      @db.Date
+  people             Int           @default(1)
+  requirements       Json
+  monthlyIncomePaise BigInt?
+  budgetCapPaise     BigInt?
+  cashOnHandPaise    BigInt?
+  shareToken         String?       @unique
+  status             String        @default("DRAFT")
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+
+  items     PlanItem[]
+  scenarios Scenario[]
+  snapshots BudgetSnapshot[]
+
+  @@index([ownerUserId])
+  @@index([guestSessionId])
+  @@map("plan")
+}
+
+model PlanItem {
+  id           String      @id @default(cuid())
+  planId       String
+  plan         Plan        @relation(fields: [planId], references: [id], onDelete: Cascade)
+  kind         String // ACCOMMODATION | FOOD | TRANSPORT | CUSTOM_COST
+  placeId      String?
+  roomOptionId String?
+  foodPlanId   String?
+  travelMode   TravelMode?
+  custom       Json?
+  position     Int
+
+  @@map("plan_item")
+}
+
+model Scenario {
+  id        String   @id @default(cuid())
+  planId    String
+  plan      Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  name      String
+  overrides Json
+  createdAt DateTime @default(now())
+
+  @@map("scenario")
+}
+
+model BudgetSnapshot {
+  id                 String   @id @default(cuid())
+  planId             String
+  plan               Plan     @relation(fields: [planId], references: [id], onDelete: Cascade)
+  scenarioId         String?
+  engineVersion      String
+  assumptionsVersion String
+  inputsHash         String
+  result             Json
+  createdAt          DateTime @default(now())
+
+  @@index([planId, createdAt])
+  @@map("budget_snapshot")
+}
+
+model CostAssumption {
+  id            String   @id @default(cuid())
+  key           String
+  regionId      String
+  region        Region   @relation(fields: [regionId], references: [id])
+  valuePaise    BigInt
+  p25Paise      BigInt?
+  p75Paise      BigInt?
+  unit          String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  sourceNote    String
+  confidence    String
+
+  @@index([key, regionId, effectiveFrom])
+  @@map("cost_assumption")
+}
+
+model FareRule {
+  id            String    @id @default(cuid())
+  regionId      String
+  region        Region    @relation(fields: [regionId], references: [id])
+  mode          TravelMode
+  params        Json
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  sourceNote    String
+
+  @@map("fare_rule")
+}
+
+model SavedPlace {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  placeId   String
+  place     Place    @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  note      String?
+  createdAt DateTime @default(now())
+
+  @@id([userId, placeId])
+  @@map("saved_place")
+}
+
+model Report {
+  id             String    @id @default(cuid())
+  placeId        String
+  place          Place     @relation(fields: [placeId], references: [id], onDelete: Cascade)
+  reporterUserId String?
+  guestSessionId String?
+  reason         String
+  detail         String?
+  status         String    @default("OPEN")
+  handledById    String?
+  createdAt      DateTime  @default(now())
+
+  @@map("report")
+}
+
+model DataSource {
+  id                 String   @id @default(cuid())
+  key                String   @unique
+  name               String
+  kind               String
+  licenceNote        String
+  attribution        String?
+  trustedAutoPublish Boolean  @default(false)
+  config             Json?
+  enabled            Boolean  @default(true)
+
+  provenances FactProvenance[]
+  syncRuns    SyncRun[]
+
+  @@map("data_source")
+}
+
+model SyncRun {
+  id           String     @id @default(cuid())
+  dataSourceId String
+  dataSource   DataSource @relation(fields: [dataSourceId], references: [id])
+  startedAt    DateTime
+  finishedAt   DateTime?
+  status       String
+  stats        Json?
+  error        String?
+
+  @@map("sync_run")
+}
+
+model FeatureFlag {
+  key         String   @id
+  enabled     Boolean
+  rules       Json?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  @@map("feature_flag")
+}
