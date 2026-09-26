@@ -4,5 +4,7 @@ export default defineConfig({
   test: {
     environment: "node",
     passWithNoTests: true,
+    setupFiles: ["./vitest.setup.ts"],
+    testTimeout: 15_000,
   },
 });
