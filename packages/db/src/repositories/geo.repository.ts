@@ -53,6 +53,9 @@ export interface AccommodationCandidate {
   ac: boolean;
   privateBath: boolean;
   occupancy: string;
+  kind: string | null;
+  genderPolicy: string | null;
+  foodIncluded: boolean | null;
 }
 
 export interface AccommodationCandidateFilters {
@@ -91,6 +94,9 @@ export async function findAccommodationCandidates(
       ac: boolean;
       privateBath: boolean;
       occupancy: string;
+      kind: string | null;
+      genderPolicy: string | null;
+      foodIncluded: boolean | null;
     }>
   >`
     SELECT
@@ -106,10 +112,14 @@ export async function findAccommodationCandidates(
       ro."depositPaise" AS "depositPaise",
       ro."ac"           AS "ac",
       ro."privateBath"  AS "privateBath",
-      ro."occupancy"    AS "occupancy"
+      ro."occupancy"    AS "occupancy",
+      ad."kind"         AS "kind",
+      ad."genderPolicy" AS "genderPolicy",
+      ad."foodIncluded" AS "foodIncluded"
     FROM "place" p
     JOIN "destination" d ON d."id" = ${destinationId}
     JOIN "room_option" ro ON ro."placeId" = p."id"
+    LEFT JOIN "accommodation_detail" ad ON ad."placeId" = p."id"
     WHERE p."status" = 'PUBLISHED'
       AND p."deletedAt" IS NULL
       AND p."category" = 'ACCOMMODATION'

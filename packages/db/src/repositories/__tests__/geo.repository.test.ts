@@ -17,13 +17,13 @@ describe("findAccommodationCandidates", () => {
   beforeAll(async () => {
     await prisma.$executeRaw`
       INSERT INTO "region" ("id", "kind", "slug", "name", "centroid")
-      VALUES (${regionId}, 'CITY', 'test-region-geo', 'Test Region', ST_SetSRID(ST_MakePoint(76.30, 10.00), 4326)::geography)
+      VALUES (${regionId}, 'CITY', 'test-region-geo', 'Test Region', ST_SetSRID(ST_MakePoint(-40.00, 0.00), 4326)::geography)
       ON CONFLICT ("id") DO NOTHING
     `;
     await prisma.$executeRaw`
       INSERT INTO "destination" ("id", "slug", "name", "kind", "regionId", "location", "isAnchor")
       VALUES (${destId}, 'test-dest-geo', 'Test Destination', 'OFFICE_PARK', ${regionId},
-        ST_SetSRID(ST_MakePoint(76.30, 10.00), 4326)::geography, false)
+        ST_SetSRID(ST_MakePoint(-40.00, 0.00), 4326)::geography, false)
       ON CONFLICT ("id") DO NOTHING
     `;
 
@@ -32,13 +32,13 @@ describe("findAccommodationCandidates", () => {
     await prisma.$executeRaw`
       INSERT INTO "place" ("id", "slug", "category", "name", "regionId", "location", "addressLine", "status", "updatedAt")
       VALUES (${nearPlaceId}, ${nearPlaceId}, 'ACCOMMODATION', 'Near PG', ${regionId},
-        ST_SetSRID(ST_MakePoint(76.301, 10.001), 4326)::geography, 'Test address', 'PUBLISHED', now())
+        ST_SetSRID(ST_MakePoint(-39.999, 0.001), 4326)::geography, 'Test address', 'PUBLISHED', now())
       ON CONFLICT ("id") DO NOTHING
     `;
     await prisma.$executeRaw`
       INSERT INTO "place" ("id", "slug", "category", "name", "regionId", "location", "addressLine", "status", "updatedAt")
       VALUES (${farPlaceId}, ${farPlaceId}, 'ACCOMMODATION', 'Far PG', ${regionId},
-        ST_SetSRID(ST_MakePoint(76.50, 10.20), 4326)::geography, 'Test address', 'PUBLISHED', now())
+        ST_SetSRID(ST_MakePoint(-39.70, 0.25), 4326)::geography, 'Test address', 'PUBLISHED', now())
       ON CONFLICT ("id") DO NOTHING
     `;
 
@@ -104,7 +104,7 @@ describe("findAccommodationCandidates", () => {
   });
 
   it("setPlaceLocation moves a pin and the search reflects it immediately", async () => {
-    await setPlaceLocation(farPlaceId, { lat: 10.001, lng: 76.301 }); // move far place next to destination
+    await setPlaceLocation(farPlaceId, { lat: 0.001, lng: -39.999 }); // move far place next to destination
     const results = await findAccommodationCandidates({ destinationId: destId, radiusM: 500 });
     expect(results.map((r) => r.placeId)).toContain(farPlaceId);
   });
