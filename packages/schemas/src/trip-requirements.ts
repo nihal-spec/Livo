@@ -64,7 +64,7 @@ export function emptyTripRequirements(): TripRequirements {
     budget: null,
     cashOnHandInr: null,
     accommodation: { ac: null, privateBath: null, foodIncluded: null },
-    food: {},
+    food: { mealsPerDay: null },
     transport: { hasVehicle: null, maxCommuteMin: null },
   });
 }

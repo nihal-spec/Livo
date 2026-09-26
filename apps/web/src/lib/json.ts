@@ -9,6 +9,7 @@ import { NextResponse } from "next/server";
  */
 function bigIntToString<T>(value: T): T {
   if (typeof value === "bigint") return value.toString() as unknown as T;
+  if (value instanceof Date) return value as T; // JSON.stringify handles Date via toISOString natively
   if (Array.isArray(value)) return value.map(bigIntToString) as unknown as T;
   if (value !== null && typeof value === "object") {
     return Object.fromEntries(Object.entries(value).map(([k, v]) => [k, bigIntToString(v)])) as T;

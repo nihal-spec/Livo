@@ -20,6 +20,14 @@ describe("jsonResponse", () => {
     expect(body).toEqual({ a: null, b: 1, c: "text", d: true });
   });
 
+  it("serializes Date fields correctly instead of flattening them to {}", async () => {
+    const date = new Date("2026-11-01T00:00:00.000Z");
+    const res = jsonResponse({ createdAt: date, nested: { startDate: date } });
+    const body = await res.json();
+    expect(body.createdAt).toBe("2026-11-01T00:00:00.000Z");
+    expect(body.nested.startDate).toBe("2026-11-01T00:00:00.000Z");
+  });
+
   it("passes through the response init (status code)", async () => {
     const res = jsonResponse({ error: true }, { status: 422 });
     expect(res.status).toBe(422);
