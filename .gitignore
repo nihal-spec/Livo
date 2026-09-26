@@ -1,0 +1,12 @@
+node_modules/
+.next/
+dist/
+.turbo/
+.env
+.env.local
+*.log
+.DS_Store
+coverage/
+/apps/*/node_modules
+/packages/*/node_modules
+prisma/migrations/.gitkeep
