@@ -3,6 +3,7 @@ import type { AccommodationSearchItem } from "@livo/schemas";
 import { Money } from "./Money.js";
 import { CommuteBadge } from "./CommuteBadge.js";
 import { ReasonChips } from "./ReasonChips.js";
+import { addAccommodationToNewPlan } from "@/app/actions/plans.js";
 
 const BASIS_SUFFIX: Record<string, string> = {
   PER_MONTH: "/mo",
@@ -17,7 +18,15 @@ const BASIS_SUFFIX: Record<string, string> = {
  * total, commute, reason chips. No stock photography — a neutral
  * placeholder when there is no real photo (there is no photo pipeline yet).
  */
-export function ListingCard({ item }: { item: AccommodationSearchItem }) {
+export function ListingCard({
+  item,
+  destinationId,
+  destinationName,
+}: {
+  item: AccommodationSearchItem;
+  destinationId: string;
+  destinationName: string;
+}) {
   return (
     <li className="flex gap-4 rounded-lg border border-slate-200 p-4">
       <div
@@ -56,6 +65,18 @@ export function ListingCard({ item }: { item: AccommodationSearchItem }) {
         )}
 
         <ReasonChips reasons={item.reasons} />
+
+        <form action={addAccommodationToNewPlan}>
+          <input type="hidden" name="destinationId" value={destinationId} />
+          <input type="hidden" name="destinationName" value={destinationName} />
+          <input type="hidden" name="roomOptionId" value={item.room.id} />
+          <button
+            type="submit"
+            className="mt-1 rounded-md border border-teal-700 px-3 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
+          >
+            Add to plan
+          </button>
+        </form>
       </div>
     </li>
   );

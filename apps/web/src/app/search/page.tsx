@@ -133,7 +133,12 @@ export default async function SearchPage({
       ) : (
         <ul className="space-y-3">
           {result.items.map((item) => (
-            <ListingCard key={`${item.placeId}-${item.room.id}`} item={item} />
+            <ListingCard
+              key={`${item.placeId}-${item.room.id}`}
+              item={item}
+              destinationId={result.destination.id}
+              destinationName={result.destination.name}
+            />
           ))}
         </ul>
       )}
