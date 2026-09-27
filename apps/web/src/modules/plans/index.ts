@@ -62,6 +62,28 @@ function assertOwns(
   throw new ForbiddenError("plans:read (not the owner of this plan)");
 }
 
+/**
+ * All plans owned by the current viewer (MASTER_PLAN.md §39, V1: a plans
+ * list page). An anonymous viewer owns nothing yet — no guest session has
+ * been minted for them — so this returns an empty list rather than
+ * throwing; the page renders its own "no plans yet" state for that case.
+ */
+export async function listPlans(viewer: Viewer) {
+  const owner =
+    viewer.kind === "user"
+      ? { ownerUserId: viewer.userId }
+      : viewer.kind === "guest"
+        ? { guestSessionId: viewer.guestSessionId }
+        : null;
+  if (!owner) return [];
+
+  return prisma.plan.findMany({
+    where: { ...owner, deletedAt: null },
+    include: { destination: true, items: true },
+    orderBy: { updatedAt: "desc" },
+  });
+}
+
 export async function getPlan(planId: string, viewer: Viewer, shareToken?: string) {
   const plan = await prisma.plan.findUnique({
     where: { id: planId },

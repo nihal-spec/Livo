@@ -3,7 +3,7 @@ import { prisma } from "@livo/db";
 import { emptyTripRequirements } from "@livo/schemas";
 import { createGuestSession } from "@/modules/auth/index.js";
 import { ForbiddenError } from "@/modules/rbac/index.js";
-import { addPlanItem, createPlan, getPlan, removePlanItem, setPlanSharing } from "../index.js";
+import { addPlanItem, createPlan, getPlan, listPlans, removePlanItem, setPlanSharing } from "../index.js";
 
 describe("plans module", () => {
   let destinationId: string;
@@ -129,5 +129,32 @@ describe("plans module", () => {
     await removePlanItem(plan.id, item.id, { kind: "guest", guestSessionId });
     const remaining = await prisma.planItem.findMany({ where: { planId: plan.id } });
     expect(remaining).toHaveLength(0);
+  });
+
+  it("lists only the viewer's own plans, most recently updated first", async () => {
+    const { id: guestSessionId } = await createGuestSession();
+    const { id: otherGuestId } = await createGuestSession();
+
+    const first = await createPlan(
+      { kind: "guest", guestSessionId },
+      { title: "First", purpose: "TRIP", destinationId, startDate: "2026-11-01", endDate: "2026-11-05", requirements: emptyTripRequirements() },
+    );
+    const second = await createPlan(
+      { kind: "guest", guestSessionId },
+      { title: "Second", purpose: "TRIP", destinationId, startDate: "2026-12-01", endDate: "2026-12-05", requirements: emptyTripRequirements() },
+    );
+    await createPlan(
+      { kind: "guest", guestSessionId: otherGuestId },
+      { title: "Someone else's", purpose: "TRIP", destinationId, startDate: "2026-11-01", endDate: "2026-11-05", requirements: emptyTripRequirements() },
+    );
+
+    const mine = await listPlans({ kind: "guest", guestSessionId });
+    expect(mine.map((p) => p.id)).toEqual([second.id, first.id]);
+    expect(mine.every((p) => p.title !== "Someone else's")).toBe(true);
+  });
+
+  it("returns an empty list for an anonymous viewer", async () => {
+    const plans = await listPlans({ kind: "anonymous" });
+    expect(plans).toEqual([]);
   });
 });

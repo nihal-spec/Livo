@@ -111,6 +111,11 @@ export default async function PlanPage({
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
       <header className="mb-6">
+        {!isReadOnlyShareView && (
+          <Link href="/plans" className="text-sm text-teal-700 underline">
+            ← My plans
+          </Link>
+        )}
         <h1 className="text-xl font-semibold text-slate-900">{plan.title}</h1>
         <p className="text-sm text-slate-600">
           {plan.destination.name} · {plan.purpose.replaceAll("_", " ").toLowerCase()} ·{" "}

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { prisma } from "@livo/db";
 
 export const dynamic = "force-dynamic";
@@ -16,6 +17,11 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
+      <div className="mb-4 text-right">
+        <Link href="/plans" className="text-sm text-teal-700 underline">
+          My plans →
+        </Link>
+      </div>
       <h1 className="text-2xl font-semibold text-slate-900 sm:text-3xl">
         Plan your stay near work, college or hospital — with real costs
       </h1>
