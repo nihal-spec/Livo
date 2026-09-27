@@ -126,9 +126,9 @@ export default async function PlanPage({
 
       <div className="grid gap-6 sm:grid-cols-[1fr_320px]">
         <section>
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Items</h2>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Items</h2>
           {plan.items.length === 0 ? (
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600">
               Nothing added yet.{" "}
               <Link href="/" className="text-teal-700 underline">
                 Search for a place to stay
@@ -159,7 +159,7 @@ export default async function PlanPage({
 
           {!isReadOnlyShareView && (
             <div className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Share</h2>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Share</h2>
               {shareUrl ? (
                 <div className="text-sm">
                   <p className="text-slate-600">Anyone with this link can view (not edit) this plan:</p>
@@ -188,7 +188,7 @@ export default async function PlanPage({
           )}
           {!isReadOnlyShareView && plan.items.some((i) => i.kind === "ACCOMMODATION") && (
             <div className="mt-6">
-              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">What if...</h2>
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">What if...</h2>
               <div className="flex flex-wrap gap-2">
                 {LEVERS.map((lever) => (
                   <form key={lever.value} action={runScenarioAction}>
@@ -205,7 +205,7 @@ export default async function PlanPage({
               </div>
 
               {searchParams.scenarioError && (
-                <p className="mt-3 text-sm text-slate-500">{searchParams.scenarioError}</p>
+                <p className="mt-3 text-sm text-slate-600">{searchParams.scenarioError}</p>
               )}
               {scenarioResult && (
                 <div className="mt-3">
@@ -227,7 +227,7 @@ export default async function PlanPage({
           {budget ? (
             <CostBreakdown result={budget} />
           ) : (
-            budgetError && <p className="text-sm text-slate-500">{budgetError}</p>
+            budgetError && <p className="text-sm text-slate-600">{budgetError}</p>
           )}
         </aside>
       </div>

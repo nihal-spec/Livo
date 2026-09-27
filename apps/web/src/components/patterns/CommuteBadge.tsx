@@ -32,11 +32,11 @@ export function CommuteBadge({ commute }: { commute: NonNullable<AccommodationSe
           {"–"}
           {minutes(commute.durationSMax)} min
         </span>
-        <span className="text-slate-500">
+        <span className="text-slate-600">
           {"·"} {(commute.distanceM / 1000).toFixed(1)} km
         </span>
       </span>
-      {isEstimate && <span className="text-xs text-slate-400">Estimated from road distance</span>}
+      {isEstimate && <span className="text-xs text-slate-600">Estimated from road distance</span>}
     </span>
   );
 }

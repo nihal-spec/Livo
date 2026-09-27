@@ -17,7 +17,7 @@ export function Money({
   return (
     <span className={className} style={{ fontVariantNumeric: "tabular-nums" }}>
       {formatPaise(paise)}
-      {suffix ? <span className="text-slate-500">{suffix}</span> : null}
+      {suffix ? <span className="text-slate-600">{suffix}</span> : null}
     </span>
   );
 }

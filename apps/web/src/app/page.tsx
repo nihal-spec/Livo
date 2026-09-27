@@ -25,7 +25,11 @@ export default async function Home() {
       </p>
 
       <form method="GET" action="/search" className="mt-8 flex gap-2">
+        <label htmlFor="destinationId" className="sr-only">
+          Where do you need to be?
+        </label>
         <select
+          id="destinationId"
           name="destinationId"
           required
           defaultValue=""
@@ -46,7 +50,7 @@ export default async function Home() {
       </form>
 
       <div className="mt-10">
-        <h2 className="text-sm font-medium text-slate-500">Popular destinations</h2>
+        <h2 className="text-sm font-medium text-slate-600">Popular destinations</h2>
         <ul className="mt-2 flex flex-wrap gap-2">
           {anchors.slice(0, 8).map((a) => (
             <li key={a.id}>

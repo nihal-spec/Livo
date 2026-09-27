@@ -57,17 +57,17 @@ export default async function PlaceDetailPage({ params }: { params: { slug: stri
         {place.accommodationDetail?.kind} · {place.accommodationDetail?.genderPolicy}
         {place.accommodationDetail?.foodIncluded ? " · Food included" : ""}
       </p>
-      <p className="mt-1 text-sm text-slate-500">
+      <p className="mt-1 text-sm text-slate-600">
         {place.addressLine}
         {place.landmark ? `, near ${place.landmark}` : ""}
       </p>
 
       <section className="mt-6">
-        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Room options</h2>
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Room options</h2>
         <table className="w-full border-collapse text-sm">
           <caption className="sr-only">Available room types and prices at {place.name}</caption>
           <thead>
-            <tr className="border-b border-slate-200 text-left text-slate-500">
+            <tr className="border-b border-slate-200 text-left text-slate-600">
               <th className="py-2 font-medium">Occupancy</th>
               <th className="py-2 font-medium">AC</th>
               <th className="py-2 font-medium">Bath</th>
@@ -95,7 +95,7 @@ export default async function PlaceDetailPage({ params }: { params: { slug: stri
                         factKey="price"
                       />
                     ) : (
-                      <span className="text-xs text-slate-400">Unverified</span>
+                      <span className="text-xs text-slate-600">Unverified</span>
                     )}
                   </td>
                 </tr>
@@ -107,12 +107,12 @@ export default async function PlaceDetailPage({ params }: { params: { slug: stri
 
       {place.accommodationDetail?.rules && (
         <section className="mt-6">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">Rules</h2>
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Rules</h2>
           <p className="text-sm text-slate-700">{place.accommodationDetail.rules}</p>
         </section>
       )}
 
-      <p className="mt-8 text-xs text-slate-400">
+      <p className="mt-8 text-xs text-slate-600">
         Report a problem with this listing — coming soon. Every price shown here is either verified by our team or
         clearly labelled as an estimate.
       </p>

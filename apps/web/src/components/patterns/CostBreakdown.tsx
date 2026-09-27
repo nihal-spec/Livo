@@ -35,7 +35,7 @@ export function CostBreakdown({ result }: { result: BudgetResult }) {
 
   return (
     <div className="rounded-lg border border-slate-200 p-4">
-      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-500">Budget</h2>
+      <h2 className="text-sm font-semibold uppercase tracking-wide text-slate-600">Budget</h2>
 
       <dl className="mt-3 space-y-1 text-sm">
         {categoryEntries.map(([category, amount]) => (
@@ -99,7 +99,7 @@ export function CostBreakdown({ result }: { result: BudgetResult }) {
         </ul>
       )}
 
-      <p className="mt-3 text-xs text-slate-400">
+      <p className="mt-3 text-xs text-slate-600">
         Confidence: {result.confidence.level.toLowerCase()}
         {result.confidence.estimatedLines > 0 ? ` · ${result.confidence.estimatedLines} estimated line(s)` : ""}
       </p>

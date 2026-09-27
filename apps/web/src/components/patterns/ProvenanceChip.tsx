@@ -40,7 +40,7 @@ export function ProvenanceChip({
     >
       <span aria-hidden>{label.tone === "good" ? "✓" : label.tone === "warn" ? "⚠" : "ℹ"}</span>
       {label.text}
-      <span className="text-slate-400">&middot; {ageText}</span>
+      <span className="text-slate-600">&middot; {ageText}</span>
     </span>
   );
 }

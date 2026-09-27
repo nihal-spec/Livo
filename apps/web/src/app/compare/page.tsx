@@ -114,7 +114,7 @@ export default async function ComparePage({
           <caption className="sr-only">Side-by-side comparison of selected accommodation listings</caption>
           <thead>
             <tr>
-              <th className="w-32 py-2 text-left text-slate-500">&nbsp;</th>
+              <th className="w-32 py-2 text-left text-slate-600">&nbsp;</th>
               {rows.map((r) => (
                 <th key={r.placeId} className="py-2 text-left">
                   <Link href={`/p/${r.slug}`} className="font-semibold text-slate-900 hover:underline">
@@ -184,7 +184,7 @@ function tradeOffSentence(a: CompareRow, b: CompareRow): string {
 function CompareRowTr({ label, cells }: { label: string; cells: React.ReactNode[] }) {
   return (
     <tr className="border-t border-slate-200">
-      <th className="py-2 pr-2 text-left font-medium text-slate-500">{label}</th>
+      <th className="py-2 pr-2 text-left font-medium text-slate-600">{label}</th>
       {cells.map((c, i) => (
         <td key={i} className="py-2 pr-4">
           {c}

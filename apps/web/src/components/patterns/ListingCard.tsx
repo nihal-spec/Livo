@@ -42,7 +42,7 @@ export function ListingCard({
             <Link href={`/p/${item.slug}`} className="font-semibold text-slate-900 hover:underline">
               {item.name}
             </Link>
-            <div className="text-sm text-slate-500">
+            <div className="text-sm text-slate-600">
               {item.kind} · {item.room.occupancy.toLowerCase()} · {item.room.ac ? "AC" : "Non-AC"}
               {item.room.privateBath ? " · private bath" : ""}
             </div>
@@ -50,7 +50,7 @@ export function ListingCard({
           <div className="text-right">
             <Money paise={item.room.pricePaise} suffix={BASIS_SUFFIX[item.room.priceBasis] ?? ""} className="font-semibold" />
             {item.room.depositPaise != null && (
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-slate-600">
                 +<Money paise={item.room.depositPaise} /> deposit
               </div>
             )}
