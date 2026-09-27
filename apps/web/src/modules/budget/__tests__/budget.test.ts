@@ -81,6 +81,66 @@ describe("computeBudgetForPlan", () => {
     expect(result.byCategory.TRANSPORT).toBe(5_000n * 7n);
   });
 
+  it("adds a computed AUTO commute line when the room is far enough from the destination", async () => {
+    // Real seeded pair >8km apart, which estimateByDistance resolves to
+    // AUTO — the only mode with a seeded fare rule (DATA_STRATEGY.md §5).
+    const farRoom = await prisma.roomOption.findFirstOrThrow({
+      where: { place: { slug: "dev-pg-kalamassery-1" } },
+    });
+    const farDestination = await prisma.destination.findFirstOrThrow({
+      where: { slug: "vyttila-mobility-hub" },
+    });
+
+    const { id: guestSessionId } = await createGuestSession();
+    const plan = await createPlan(
+      { kind: "guest", guestSessionId },
+      {
+        title: "Commute line plan",
+        purpose: "JOB_RELOCATION",
+        destinationId: farDestination.id,
+        startDate: "2026-11-01",
+        endDate: "2026-12-01", // 30 days
+        requirements: emptyTripRequirements(),
+      },
+    );
+    await addPlanItem(plan.id, { kind: "guest", guestSessionId }, {
+      kind: "ACCOMMODATION",
+      roomOptionId: farRoom.id,
+    });
+
+    const result = await computeBudgetForPlan(plan.id, { kind: "guest", guestSessionId });
+    expect(result.byCategory.TRANSPORT).toBeGreaterThan(0n);
+  });
+
+  it("does not add a commute line when the room is walkable (no fare data needed or applicable)", async () => {
+    const nearRoom = await prisma.roomOption.findFirstOrThrow({
+      where: { place: { slug: "dev-pg-kakkanad-3" } }, // ~317m from Infopark Phase 1
+    });
+    const nearDestination = await prisma.destination.findFirstOrThrow({
+      where: { slug: "infopark-phase-1-kochi" },
+    });
+
+    const { id: guestSessionId } = await createGuestSession();
+    const plan = await createPlan(
+      { kind: "guest", guestSessionId },
+      {
+        title: "Walkable plan",
+        purpose: "JOB_RELOCATION",
+        destinationId: nearDestination.id,
+        startDate: "2026-11-01",
+        endDate: "2026-12-01",
+        requirements: emptyTripRequirements(),
+      },
+    );
+    await addPlanItem(plan.id, { kind: "guest", guestSessionId }, {
+      kind: "ACCOMMODATION",
+      roomOptionId: nearRoom.id,
+    });
+
+    const result = await computeBudgetForPlan(plan.id, { kind: "guest", guestSessionId });
+    expect(result.byCategory.TRANSPORT ?? 0n).toBe(0n);
+  });
+
   it("rejects computing a budget for a plan the viewer doesn't own", async () => {
     const { id: guestSessionId } = await createGuestSession();
     const { id: otherGuestId } = await createGuestSession();

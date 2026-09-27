@@ -62,3 +62,31 @@ export async function toggleShareAction(formData: FormData): Promise<void> {
   await setPlanSharing(planId, viewer, enabled);
   redirect(`/plan/${planId}`);
 }
+
+/**
+ * Runs a what-if lever (ARCHITECTURE.md §6) and redirects back to the plan
+ * with the resulting scenario id in the URL, so the plan page can render
+ * its ScenarioDelta card. Errors (no accommodation item yet, unsupported
+ * lever) redirect back with an error message instead of a scenario id —
+ * they're expected user-facing outcomes, not server failures.
+ */
+export async function runScenarioAction(formData: FormData): Promise<void> {
+  const { runScenario } = await import("@/modules/scenarios/index.js");
+  const planId = String(formData.get("planId") ?? "");
+  const lever = String(formData.get("lever") ?? "");
+  const viewer = await resolveViewerForAction();
+
+  // next/navigation's redirect() works by throwing internally, so the
+  // actual redirect call must sit outside this try/catch — otherwise a
+  // *successful* run's own redirect would be caught here as if it were an
+  // error from runScenario().
+  let target: string;
+  try {
+    const result = await runScenario(planId, viewer, { lever: lever as never });
+    target = `/plan/${planId}?scenario=${result.scenarioId}`;
+  } catch (err) {
+    if (!(err instanceof Error)) throw err;
+    target = `/plan/${planId}?scenarioError=${encodeURIComponent(err.message)}`;
+  }
+  redirect(target);
+}

@@ -7,6 +7,13 @@ import type {
   ReasonCode,
 } from "@livo/schemas";
 import { estimateByDistance } from "./estimate.js";
+import {
+  autoFareForDistance,
+  getAutoFareRule,
+  normalizeToMonthlyPaise,
+  DEFAULT_TRIPS_PER_WEEK,
+  WEEKS_PER_MONTH,
+} from "./fare.js";
 
 /**
  * Search service (ARCHITECTURE.md §3-4). Pipeline: PostGIS radius
@@ -15,56 +22,12 @@ import { estimateByDistance } from "./estimate.js";
  * score anywhere (ADR-014).
  */
 
-const DEFAULT_TRIPS_PER_WEEK = 5;
-const WEEKS_PER_MONTH = 4.345;
-
-function normalizeToMonthlyPaise(pricePaise: bigint, basis: string): bigint {
-  switch (basis) {
-    case "PER_MONTH":
-      return pricePaise;
-    case "PER_NIGHT":
-    case "PER_DAY":
-      return BigInt(Math.round(Number(pricePaise) * 30));
-    case "PER_WEEK":
-      return BigInt(Math.round(Number(pricePaise) * WEEKS_PER_MONTH));
-    default:
-      return pricePaise;
-  }
-}
-
 async function getFoodAssumptionPaise(regionId: string): Promise<bigint | null> {
   const row = await prisma.costAssumption.findFirst({
     where: { key: "food.mess.2meals.monthly", regionId, effectiveTo: null },
     orderBy: { effectiveFrom: "desc" },
   });
   return row?.valuePaise ?? null;
-}
-
-interface AutoFareParams {
-  minFarePaise: bigint;
-  minKm: number;
-  perKmPaise: bigint;
-}
-
-async function getAutoFareRule(regionId: string): Promise<AutoFareParams | null> {
-  const row = await prisma.fareRule.findFirst({
-    where: { regionId, mode: "AUTO", effectiveTo: null },
-    orderBy: { effectiveFrom: "desc" },
-  });
-  if (!row) return null;
-  const params = row.params as { minFarePaise: string; minKm: number; perKmPaise: string };
-  return {
-    minFarePaise: BigInt(params.minFarePaise),
-    minKm: params.minKm,
-    perKmPaise: BigInt(params.perKmPaise),
-  };
-}
-
-function autoFareForDistance(distanceM: number, rule: AutoFareParams): bigint {
-  const km = distanceM / 1000;
-  if (km <= rule.minKm) return rule.minFarePaise;
-  const extraKm = km - rule.minKm;
-  return rule.minFarePaise + BigInt(Math.round(extraKm * Number(rule.perKmPaise)));
 }
 
 function median(values: bigint[]): bigint {

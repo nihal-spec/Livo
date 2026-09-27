@@ -1,8 +1,11 @@
 import { prisma } from "@livo/db";
+import { getDistanceToDestination } from "@livo/db/geo";
 import { calculateBudget } from "@livo/budget-engine";
 import type { BudgetInput, BudgetResult, LineItemInput, PriceBasis, Frequency } from "@livo/schemas";
 import { ForbiddenError } from "@/modules/rbac/index.js";
 import type { Viewer } from "@/modules/auth/index.js";
+import { estimateByDistance } from "@/modules/search/estimate.js";
+import { autoFareForDistance, getAutoFareRule, DEFAULT_TRIPS_PER_WEEK } from "@/modules/search/fare.js";
 
 /**
  * Bridges a Plan's items to the pure budget engine (ARCHITECTURE.md §5).
@@ -25,20 +28,61 @@ function toDateOnly(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-export async function buildBudgetInputForPlan(planId: string): Promise<BudgetInput> {
+async function computeCommuteLine(
+  placeId: string,
+  destinationId: string,
+  regionId: string,
+): Promise<LineItemInput | null> {
+  const distanceM = await getDistanceToDestination(placeId, destinationId);
+  if (distanceM == null) return null;
+
+  const estimate = estimateByDistance(distanceM);
+  if (estimate.mode !== "AUTO") return null; // no fare data for WALK/BUS/METRO yet — never invent a number
+
+  const rule = await getAutoFareRule(regionId);
+  if (!rule) return null;
+
+  const oneWayFarePaise = autoFareForDistance(distanceM, rule);
+  const roundTripsPerWeek = DEFAULT_TRIPS_PER_WEEK * 2;
+
+  return {
+    id: "computed_commute",
+    category: "TRANSPORT",
+    label: "Commute (auto, estimated)",
+    amountPaise: oneWayFarePaise,
+    frequency: "WEEKLY",
+    quantityPerFrequency: roundTripsPerWeek,
+    kind: "VARIABLE",
+    refundable: false,
+    provenance: { sourceType: "ESTIMATED", ref: "fare_rule", stale: false },
+  };
+}
+
+export interface BuildBudgetInputOptions {
+  /** Swap the plan's accommodation item for a different room (what-if levers — MODULE scenarios). */
+  overrideRoomOptionId?: string;
+}
+
+export async function buildBudgetInputForPlan(
+  planId: string,
+  opts: BuildBudgetInputOptions = {},
+): Promise<BudgetInput> {
   const plan = await prisma.plan.findUniqueOrThrow({
     where: { id: planId },
-    include: { items: true },
+    include: { items: true, destination: true },
   });
 
   type AccommodationBasis = NonNullable<BudgetInput["accommodation"]>;
   const lineItems: LineItemInput[] = [];
   let accommodationBasis: AccommodationBasis | null = null;
+  let accommodationPlaceId: string | null = null;
+  let hasCustomTransportLine = false;
 
   for (const item of plan.items) {
-    if (item.kind === "ACCOMMODATION" && item.roomOptionId) {
+    if (item.kind === "ACCOMMODATION" && (opts.overrideRoomOptionId ?? item.roomOptionId)) {
+      const roomOptionId = opts.overrideRoomOptionId ?? item.roomOptionId!;
       const room = await prisma.roomOption.findUnique({
-        where: { id: item.roomOptionId },
+        where: { id: roomOptionId },
         include: { place: { include: { accommodationDetail: true } } },
       });
       if (!room) continue;
@@ -47,6 +91,7 @@ export async function buildBudgetInputForPlan(planId: string): Promise<BudgetInp
         priceBasis: room.priceBasis as AccommodationBasis["priceBasis"],
         hasPerDayRate: false,
       };
+      accommodationPlaceId = room.placeId;
 
       lineItems.push({
         id: `item_${item.id}_rent`,
@@ -95,6 +140,7 @@ export async function buildBudgetInputForPlan(planId: string): Promise<BudgetInp
 
     if (item.custom) {
       const custom = item.custom as { label: string; amountPaise: string; frequency: Frequency; category: string };
+      if (custom.category === "TRANSPORT") hasCustomTransportLine = true;
       lineItems.push({
         id: `item_${item.id}_custom`,
         category: custom.category as LineItemInput["category"],
@@ -107,6 +153,17 @@ export async function buildBudgetInputForPlan(planId: string): Promise<BudgetInp
         provenance: { sourceType: "USER", ref: item.id, stale: false },
       });
     }
+  }
+
+  // A commute line is computed automatically from the accommodation's real
+  // distance to the plan's destination, the same way search ranks results
+  // — so a saved plan's budget matches what search showed for this room.
+  // Only added when we have real fare data (currently: AUTO fares only, per
+  // DATA_STRATEGY.md §5) and the user hasn't already entered their own
+  // transport line, to avoid double-counting.
+  if (accommodationPlaceId && !hasCustomTransportLine) {
+    const commuteLine = await computeCommuteLine(accommodationPlaceId, plan.destinationId, plan.destination.regionId);
+    if (commuteLine) lineItems.push(commuteLine);
   }
 
   return {

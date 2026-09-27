@@ -5,7 +5,16 @@ import { getPlan } from "@/modules/plans/index.js";
 import { computeBudgetForPlan } from "@/modules/budget/index.js";
 import { ForbiddenError } from "@/modules/rbac/index.js";
 import { CostBreakdown } from "@/components/patterns/CostBreakdown.js";
-import { removeItemAction, toggleShareAction } from "@/app/actions/plans.js";
+import { ScenarioDelta } from "@/components/patterns/ScenarioDelta.js";
+import { removeItemAction, runScenarioAction, toggleShareAction } from "@/app/actions/plans.js";
+import { getScenarioResult } from "@/modules/scenarios/index.js";
+
+const LEVERS = [
+  { value: "CHEAPER", label: "Cheaper" },
+  { value: "CLOSER", label: "Closer" },
+  { value: "FOOD_INCLUDED", label: "Food included" },
+  { value: "PRIVATE_ROOM", label: "Private room" },
+] as const;
 
 export const dynamic = "force-dynamic";
 
@@ -40,7 +49,7 @@ export default async function PlanPage({
   searchParams,
 }: {
   params: { id: string };
-  searchParams: { share?: string };
+  searchParams: { share?: string; scenario?: string; scenarioError?: string };
 }) {
   const viewer = await resolveViewerReadOnly();
 
@@ -97,6 +106,7 @@ export default async function PlanPage({
   }
 
   const shareUrl = plan.shareToken ? `/plan/${plan.id}?share=${plan.shareToken}` : null;
+  const scenarioResult = searchParams.scenario ? await getScenarioResult(searchParams.scenario) : null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8">
@@ -173,6 +183,41 @@ export default async function PlanPage({
                     Get a share link
                   </button>
                 </form>
+              )}
+            </div>
+          )}
+          {!isReadOnlyShareView && plan.items.some((i) => i.kind === "ACCOMMODATION") && (
+            <div className="mt-6">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">What if...</h2>
+              <div className="flex flex-wrap gap-2">
+                {LEVERS.map((lever) => (
+                  <form key={lever.value} action={runScenarioAction}>
+                    <input type="hidden" name="planId" value={plan.id} />
+                    <input type="hidden" name="lever" value={lever.value} />
+                    <button
+                      type="submit"
+                      className="rounded-full border border-slate-300 px-3 py-1 text-sm text-slate-700 hover:border-teal-600 hover:text-teal-800"
+                    >
+                      {lever.label}
+                    </button>
+                  </form>
+                ))}
+              </div>
+
+              {searchParams.scenarioError && (
+                <p className="mt-3 text-sm text-slate-500">{searchParams.scenarioError}</p>
+              )}
+              {scenarioResult && (
+                <div className="mt-3">
+                  <ScenarioDelta
+                    lever={scenarioResult.lever}
+                    found={scenarioResult.found}
+                    note={scenarioResult.note}
+                    alternative={scenarioResult.alternative}
+                    deltaMonthlyPaise={scenarioResult.deltaMonthlyPaise}
+                    deltaUpfrontPaise={scenarioResult.deltaUpfrontPaise}
+                  />
+                </div>
               )}
             </div>
           )}
