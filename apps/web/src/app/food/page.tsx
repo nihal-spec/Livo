@@ -1,28 +1,23 @@
 import Link from "next/link";
-import { Suspense } from "react";
 import { prisma } from "@livo/db";
-import { formatPaise } from "@livo/schemas";
-import { searchAccommodation } from "@/modules/search/index.js";
-import { parseAccommodationSearchParams } from "@/modules/search/query.js";
-import { ListingCard } from "@/components/patterns/ListingCard.js";
-import { CompareBar } from "@/components/patterns/CompareBar.js";
+import { searchFood } from "@/modules/search/food.js";
+import { parseFoodSearchParams } from "@/modules/search/foodQuery.js";
+import { FoodListingCard } from "@/components/patterns/FoodListingCard.js";
 
 export const dynamic = "force-dynamic";
 
 const SORTS = [
   { value: "recommended", label: "Recommended" },
   { value: "price", label: "Lowest price" },
-  { value: "total_cost", label: "Lowest total cost" },
   { value: "closest", label: "Closest" },
 ] as const;
 
 /**
- * Search results (UX_UI_SPEC.md §5.6). List-only for now — the map view
- * (MapLibre + tile provider, ADR-010) is not wired up yet; the list is
- * fully usable on its own, which the spec requires regardless
- * ("Map unavailable" must never block search).
+ * Food search (mess/tiffin/restaurant/cloud kitchen) — parity with
+ * /search for accommodation, per MASTER_PLAN.md §2's MVP scope
+ * ("messes and tiffin services"). List-only, same as accommodation search.
  */
-export default async function SearchPage({
+export default async function FoodSearchPage({
   searchParams,
 }: {
   searchParams: Record<string, string | string[] | undefined>;
@@ -39,7 +34,7 @@ export default async function SearchPage({
     );
   }
 
-  const parsed = parseAccommodationSearchParams(searchParams);
+  const parsed = parseFoodSearchParams(searchParams);
   if (!parsed.success) {
     return (
       <main className="mx-auto max-w-2xl px-4 py-16">
@@ -57,7 +52,7 @@ export default async function SearchPage({
 
   let result;
   try {
-    result = await searchAccommodation(parsed.data);
+    result = await searchFood(parsed.data);
   } catch (err) {
     if (err instanceof Error && (err as { code?: string }).code === "NOT_FOUND") {
       return (
@@ -77,20 +72,16 @@ export default async function SearchPage({
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
       <header className="mb-6">
-        <h1 className="text-xl font-semibold text-slate-900">
-          Places to stay near {result.destination.name}
-        </h1>
+        <h1 className="text-xl font-semibold text-slate-900">Food near {result.destination.name}</h1>
         <p className="text-sm text-slate-600">
-          {result.facets.counts.total} places within {parsed.data.radiusKm} km · {result.facets.counts.verified}{" "}
-          verified
+          {result.facets.counts.total} places within {parsed.data.radiusKm} km
         </p>
-        <Link href={`/food?destinationId=${result.destination.id}`} className="text-sm text-teal-700 underline">
-          Find food nearby →
+        <Link href={`/search?destinationId=${result.destination.id}`} className="text-sm text-teal-700 underline">
+          ← Back to places to stay
         </Link>
       </header>
 
       <form method="GET" className="mb-6 flex flex-wrap items-end gap-3 rounded-lg border border-slate-200 p-4">
-        <input type="hidden" name="destinationId" value={parsed.data.destinationId} />
         <label className="flex flex-col text-sm">
           Destination
           <select
@@ -116,7 +107,7 @@ export default async function SearchPage({
           </select>
         </label>
         <label className="flex flex-col text-sm">
-          Max monthly (₹)
+          Max price (₹)
           <input
             type="number"
             name="priceMax"
@@ -125,8 +116,8 @@ export default async function SearchPage({
           />
         </label>
         <label className="flex items-center gap-1.5 pb-1.5 text-sm">
-          <input type="checkbox" name="foodIncluded" value="true" defaultChecked={parsed.data.foodIncluded} />
-          Food included
+          <input type="checkbox" name="vegOnly" value="true" defaultChecked={parsed.data.vegOnly} />
+          Veg only
         </label>
         <button type="submit" className="rounded bg-slate-900 px-4 py-1.5 text-sm font-medium text-white">
           Update
@@ -134,12 +125,14 @@ export default async function SearchPage({
       </form>
 
       {result.items.length === 0 ? (
-        <EmptyState nearMisses={result.nearMisses} />
+        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
+          <p className="font-medium text-slate-900">Nothing matches those filters yet.</p>
+        </div>
       ) : (
         <ul className="space-y-3">
           {result.items.map((item) => (
-            <ListingCard
-              key={`${item.placeId}-${item.room.id}`}
+            <FoodListingCard
+              key={item.foodPlan.id}
               item={item}
               destinationId={result.destination.id}
               destinationName={result.destination.name}
@@ -147,24 +140,6 @@ export default async function SearchPage({
           ))}
         </ul>
       )}
-
-      <Suspense fallback={null}>
-        <CompareBar destinationId={result.destination.id} />
-      </Suspense>
     </main>
-  );
-}
-
-function EmptyState({ nearMisses }: { nearMisses?: { cheapestOverBudgetPaise: bigint | null } }) {
-  return (
-    <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-      <p className="font-medium text-slate-900">Nothing matches those filters yet.</p>
-      {nearMisses?.cheapestOverBudgetPaise != null && (
-        <p className="mt-1 text-sm text-slate-600">
-          The cheapest option nearby is {formatPaise(nearMisses.cheapestOverBudgetPaise)}/mo — try raising your
-          budget.
-        </p>
-      )}
-    </div>
   );
 }

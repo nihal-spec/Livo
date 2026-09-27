@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AccommodationKind, GenderPolicy, TravelMode } from "./enums.js";
+import { AccommodationKind, FoodKind, GenderPolicy, TravelMode } from "./enums.js";
 import { paiseSchema } from "./money.js";
 
 /** GET /search/accommodation query params (API_SPEC.md §2). */
@@ -35,6 +35,8 @@ export const ReasonCode = z.enum([
   "VERIFIED_RECENTLY",
   "PRIVATE_ROOM",
   "WITHIN_WALK",
+  "VEG_ONLY",
+  "DELIVERS",
 ]);
 export type ReasonCode = z.infer<typeof ReasonCode>;
 
@@ -89,3 +91,47 @@ export const AccommodationSearchResponse = z.object({
   dataVersion: z.string(),
 });
 export type AccommodationSearchResponse = z.infer<typeof AccommodationSearchResponse>;
+
+/** GET /search/food query params — mess/tiffin/restaurant search, parity with accommodation search. */
+export const FoodSearchQuery = z.object({
+  destinationId: z.string(),
+  kinds: z.array(FoodKind).default([]),
+  vegOnly: z.boolean().optional(),
+  priceMax: z.number().int().positive().optional(),
+  radiusKm: z.number().min(0.5).max(30).default(3),
+  sort: z.enum(["recommended", "price", "closest"]).default("recommended"),
+  cursor: z.string().optional(),
+  limit: z.number().int().min(1).max(50).default(20),
+});
+export type FoodSearchQuery = z.infer<typeof FoodSearchQuery>;
+
+export const FoodSearchItem = z.object({
+  placeId: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  kind: FoodKind,
+  location: z.object({ lat: z.number(), lng: z.number() }),
+  foodPlan: z.object({
+    id: z.string(),
+    vegOnly: z.boolean().nullable(),
+    delivers: z.boolean().nullable(),
+    meals: z.array(z.string()),
+    pricePaise: paiseSchema,
+    priceBasis: z.enum(["PER_MEAL", "PER_DAY", "PER_WEEK", "PER_MONTH"]),
+  }),
+  distanceM: z.number().int(),
+  reasons: z.array(z.object({ code: ReasonCode, value: z.string().optional() })),
+});
+export type FoodSearchItem = z.infer<typeof FoodSearchItem>;
+
+export const FoodSearchResponse = z.object({
+  destination: z.object({ id: z.string(), name: z.string() }),
+  items: z.array(FoodSearchItem),
+  facets: z.object({
+    kinds: z.record(z.string(), z.number().int()),
+    counts: z.object({ total: z.number().int() }),
+  }),
+  nextCursor: z.string().nullable(),
+  dataVersion: z.string(),
+});
+export type FoodSearchResponse = z.infer<typeof FoodSearchResponse>;

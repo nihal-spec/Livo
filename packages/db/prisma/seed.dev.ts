@@ -46,6 +46,28 @@ const LISTINGS: SyntheticListing[] = [
   { slug: "dev-pg-kalamassery-1", name: "[DEV] Kalamassery Budget Rooms", lat: 10.0500, lng: 76.3200, genderPolicy: "MEN", foodIncluded: false, occupancy: "TRIPLE", ac: false, privateBath: false, pricePaise: 400_000n, depositPaise: 800_000n },
 ];
 
+interface SyntheticFoodListing {
+  slug: string;
+  name: string;
+  lat: number;
+  lng: number;
+  kind: "MESS" | "TIFFIN" | "RESTAURANT" | "CLOUD_KITCHEN" | "MEAL_SUBSCRIPTION";
+  vegOnly: boolean;
+  delivers: boolean;
+  meals: string[];
+  priceBasis: "PER_MEAL" | "PER_MONTH";
+  pricePaise: bigint;
+}
+
+// Scattered around the same Infopark/Kakkanad area as the accommodation fixtures above.
+const FOOD_LISTINGS: SyntheticFoodListing[] = [
+  { slug: "dev-mess-kakkanad-1", name: "[DEV] Amma's Kitchen Mess", lat: 10.0160, lng: 76.3540, kind: "MESS", vegOnly: true, delivers: false, meals: ["LUNCH", "DINNER"], priceBasis: "PER_MONTH", pricePaise: 280_000n },
+  { slug: "dev-tiffin-kakkanad-1", name: "[DEV] Kochi Tiffin Service", lat: 10.0095, lng: 76.3595, kind: "TIFFIN", vegOnly: false, delivers: true, meals: ["BREAKFAST", "LUNCH"], priceBasis: "PER_MONTH", pricePaise: 320_000n },
+  { slug: "dev-cloudkitchen-infopark-1", name: "[DEV] Infopark Cloud Kitchen", lat: 10.0140, lng: 76.3590, kind: "CLOUD_KITCHEN", vegOnly: false, delivers: true, meals: ["LUNCH", "DINNER"], priceBasis: "PER_MEAL", pricePaise: 12_000n },
+  { slug: "dev-restaurant-thrikkakara-1", name: "[DEV] Thrikkakara Family Restaurant", lat: 10.0400, lng: 76.3360, kind: "RESTAURANT", vegOnly: false, delivers: false, meals: ["LUNCH", "DINNER"], priceBasis: "PER_MEAL", pricePaise: 15_000n },
+  { slug: "dev-mess-edappally-1", name: "[DEV] Edappally Veg Mess", lat: 10.0225, lng: 76.3090, kind: "MESS", vegOnly: true, delivers: false, meals: ["BREAKFAST", "LUNCH", "DINNER"], priceBasis: "PER_MONTH", pricePaise: 260_000n },
+];
+
 async function main() {
   const region = await prisma.region.findUniqueOrThrow({ where: { slug: "kochi" } });
   const devDataSource = await prisma.dataSource.upsert({
@@ -115,6 +137,48 @@ async function main() {
     });
   }
   console.log(`Seeded ${LISTINGS.length} synthetic accommodation listings`);
+
+  for (const f of FOOD_LISTINGS) {
+    const placeId = `place_${cuidLike(f.slug)}`;
+    await prisma.$executeRaw`
+      INSERT INTO "place" ("id", "slug", "category", "name", "regionId", "location", "addressLine", "status", "attributes", "updatedAt")
+      VALUES (
+        ${placeId}, ${f.slug}, 'FOOD', ${f.name}, ${region.id},
+        ST_SetSRID(ST_MakePoint(${f.lng}, ${f.lat}), 4326)::geography,
+        'Synthetic dev address', 'PUBLISHED', ${JSON.stringify({ synthetic: true })}::jsonb, now()
+      )
+      ON CONFLICT ("id") DO NOTHING
+    `;
+
+    const foodPlanId = `food_${cuidLike(f.slug)}`;
+    await prisma.foodPlan.upsert({
+      where: { id: foodPlanId },
+      update: {},
+      create: {
+        id: foodPlanId,
+        placeId,
+        kind: f.kind,
+        meals: f.meals,
+        vegOnly: f.vegOnly,
+        priceBasis: f.priceBasis,
+        pricePaise: f.pricePaise,
+        delivers: f.delivers,
+      },
+    });
+
+    await prisma.factProvenance.create({
+      data: {
+        placeId,
+        factKey: `food:${foodPlanId}:price`,
+        sourceType: "IMPORTED",
+        dataSourceId: devDataSource.id,
+        observedAt: new Date(),
+        confidence: "LOW",
+        note: SYNTHETIC_NOTE,
+      },
+    });
+  }
+  console.log(`Seeded ${FOOD_LISTINGS.length} synthetic food listings`);
 
   // Placeholder cost assumptions (DATA_STRATEGY.md §5) — LOW confidence,
   // explicitly not from a real survey. Replace with real Livo survey data

@@ -44,4 +44,13 @@ describe("parseAccommodationSearchParams", () => {
     const result = parseAccommodationSearchParams({});
     expect(result.success).toBe(false);
   });
+
+  it("treats an empty priceMax field as not set, not as 0", () => {
+    // Regression: a form's numeric field left blank submits "", which
+    // Number("") coerces to 0 — and 0 fails priceMax's positive() check,
+    // silently turning "no filter" into "invalid request".
+    const result = parseAccommodationSearchParams({ destinationId: "d", priceMax: "" });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.priceMax).toBeUndefined();
+  });
 });

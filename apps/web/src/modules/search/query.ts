@@ -13,7 +13,9 @@ export function parseAccommodationSearchParams(
   const flat: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
     if (v == null) continue;
-    flat[k] = Array.isArray(v) ? v[0] : v;
+    const value = Array.isArray(v) ? v[0] : v;
+    if (value === "") continue; // an empty form field (e.g. "Max monthly" left blank) means "not set", not 0
+    flat[k] = value;
   }
 
   const candidate: Record<string, unknown> = { ...flat };

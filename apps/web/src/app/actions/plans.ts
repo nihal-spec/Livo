@@ -46,6 +46,35 @@ export async function addAccommodationToNewPlan(formData: FormData): Promise<voi
   redirect(`/plan/${plan.id}`);
 }
 
+/** Parity with addAccommodationToNewPlan, for a food-plan result. */
+export async function addFoodToNewPlan(formData: FormData): Promise<void> {
+  const destinationId = String(formData.get("destinationId") ?? "");
+  const foodPlanId = String(formData.get("foodPlanId") ?? "");
+  const destinationName = String(formData.get("destinationName") ?? "your destination");
+  if (!destinationId || !foodPlanId) throw new Error("Missing destinationId or foodPlanId");
+
+  const purposeRaw = formData.get("purpose");
+  const purpose = PlanPurpose.safeParse(purposeRaw).success ? (purposeRaw as string) : "JOB_RELOCATION";
+
+  const viewer = await resolveViewerForAction();
+  const start = new Date();
+  start.setDate(start.getDate() + 7);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 90);
+
+  const plan = await createPlan(viewer, {
+    title: `Stay near ${destinationName}`,
+    purpose: purpose as PlanPurpose,
+    destinationId,
+    startDate: dateOnly(start),
+    endDate: dateOnly(end),
+    requirements: emptyTripRequirements(),
+  });
+
+  await addPlanItem(plan.id, viewer, { kind: "FOOD", foodPlanId });
+  redirect(`/plan/${plan.id}`);
+}
+
 export async function removeItemAction(formData: FormData): Promise<void> {
   const { removePlanItem } = await import("@/modules/plans/index.js");
   const planId = String(formData.get("planId") ?? "");

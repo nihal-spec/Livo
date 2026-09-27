@@ -150,6 +150,91 @@ export async function findAccommodationCandidates(
   });
 }
 
+export interface FoodCandidate {
+  placeId: string;
+  slug: string;
+  name: string;
+  lat: number;
+  lng: number;
+  distanceM: number;
+  foodKind: string;
+  foodPlanId: string;
+  vegOnly: boolean | null;
+  delivers: boolean | null;
+  meals: string[];
+  pricePaise: bigint;
+  priceBasis: string;
+}
+
+export interface FoodCandidateFilters {
+  destinationId: string;
+  radiusM: number;
+  priceMaxPaise?: bigint;
+  vegOnly?: boolean;
+  kinds?: string[];
+  limit?: number;
+}
+
+/**
+ * Candidate food search (mess/tiffin/restaurant/cloud kitchen), parity
+ * with findAccommodationCandidates above: PostGIS radius pre-filter +
+ * join to food plans, with optional filters applied in JS rather than as
+ * conditional SQL fragments — see the comment on findAccommodationCandidates
+ * for why that specific pattern is load-bearing, not just style.
+ */
+export async function findFoodCandidates(filters: FoodCandidateFilters): Promise<FoodCandidate[]> {
+  const { destinationId, radiusM, priceMaxPaise, vegOnly, kinds, limit = 500 } = filters;
+
+  const rows = await prisma.$queryRaw<
+    Array<{
+      placeId: string;
+      slug: string;
+      name: string;
+      lat: number;
+      lng: number;
+      distanceM: number;
+      foodKind: string;
+      foodPlanId: string;
+      vegOnly: boolean | null;
+      delivers: boolean | null;
+      meals: string[];
+      pricePaise: bigint;
+      priceBasis: string;
+    }>
+  >`
+    SELECT
+      p."id"           AS "placeId",
+      p."slug"         AS "slug",
+      p."name"         AS "name",
+      ST_Y(p."location"::geometry) AS "lat",
+      ST_X(p."location"::geometry) AS "lng",
+      ST_Distance(p."location", d."location") AS "distanceM",
+      fp."kind"        AS "foodKind",
+      fp."id"          AS "foodPlanId",
+      fp."vegOnly"     AS "vegOnly",
+      fp."delivers"    AS "delivers",
+      fp."meals"       AS "meals",
+      fp."pricePaise"  AS "pricePaise",
+      fp."priceBasis"  AS "priceBasis"
+    FROM "place" p
+    JOIN "destination" d ON d."id" = ${destinationId}
+    JOIN "food_plan" fp ON fp."placeId" = p."id"
+    WHERE p."status" = 'PUBLISHED'
+      AND p."deletedAt" IS NULL
+      AND p."category" = 'FOOD'
+      AND ST_DWithin(p."location", d."location", ${radiusM})
+    ORDER BY "distanceM" ASC
+    LIMIT ${limit}
+  `;
+
+  return rows.filter((r) => {
+    if (priceMaxPaise != null && r.pricePaise > priceMaxPaise) return false;
+    if (vegOnly != null && r.vegOnly !== vegOnly) return false;
+    if (kinds != null && kinds.length > 0 && !kinds.includes(r.foodKind)) return false;
+    return true;
+  });
+}
+
 /** Nearest-neighbour helper for dedupe on ingest (DATA_STRATEGY.md §6). */
 export async function findNearbyPlaces(
   point: LatLng,
