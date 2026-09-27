@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@livo/db";
 import { formatPaise } from "@livo/schemas";
 import { searchAccommodation } from "@/modules/search/index.js";
 import { parseAccommodationSearchParams } from "@/modules/search/query.js";
 import { ListingCard } from "@/components/patterns/ListingCard.js";
+import { CompareBar } from "@/components/patterns/CompareBar.js";
 
 export const dynamic = "force-dynamic";
 
@@ -142,6 +144,10 @@ export default async function SearchPage({
           ))}
         </ul>
       )}
+
+      <Suspense fallback={null}>
+        <CompareBar destinationId={result.destination.id} />
+      </Suspense>
     </main>
   );
 }

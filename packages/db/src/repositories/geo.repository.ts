@@ -154,3 +154,13 @@ export async function findNearbyPlaces(
     LIMIT 20
   `;
 }
+
+/** Straight-line distance from a place to a destination, in metres. Used by the compare view. */
+export async function getDistanceToDestination(placeId: string, destinationId: string): Promise<number | null> {
+  const rows = await prisma.$queryRaw<Array<{ distanceM: number }>>`
+    SELECT ST_Distance(p."location", d."location") AS "distanceM"
+    FROM "place" p, "destination" d
+    WHERE p."id" = ${placeId} AND d."id" = ${destinationId}
+  `;
+  return rows[0]?.distanceM ?? null;
+}

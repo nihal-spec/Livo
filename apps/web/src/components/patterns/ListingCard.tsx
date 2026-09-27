@@ -3,6 +3,7 @@ import type { AccommodationSearchItem } from "@livo/schemas";
 import { Money } from "./Money.js";
 import { CommuteBadge } from "./CommuteBadge.js";
 import { ReasonChips } from "./ReasonChips.js";
+import { CompareToggle } from "./CompareToggle.js";
 import { addAccommodationToNewPlan } from "@/app/actions/plans.js";
 
 const BASIS_SUFFIX: Record<string, string> = {
@@ -66,17 +67,20 @@ export function ListingCard({
 
         <ReasonChips reasons={item.reasons} />
 
-        <form action={addAccommodationToNewPlan}>
-          <input type="hidden" name="destinationId" value={destinationId} />
-          <input type="hidden" name="destinationName" value={destinationName} />
-          <input type="hidden" name="roomOptionId" value={item.room.id} />
-          <button
-            type="submit"
-            className="mt-1 rounded-md border border-teal-700 px-3 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
-          >
-            Add to plan
-          </button>
-        </form>
+        <div className="flex items-center gap-3">
+          <form action={addAccommodationToNewPlan}>
+            <input type="hidden" name="destinationId" value={destinationId} />
+            <input type="hidden" name="destinationName" value={destinationName} />
+            <input type="hidden" name="roomOptionId" value={item.room.id} />
+            <button
+              type="submit"
+              className="mt-1 rounded-md border border-teal-700 px-3 py-1 text-sm font-medium text-teal-800 hover:bg-teal-50"
+            >
+              Add to plan
+            </button>
+          </form>
+          <CompareToggle compareId={`${item.placeId}.${item.room.id}`} />
+        </div>
       </div>
     </li>
   );
