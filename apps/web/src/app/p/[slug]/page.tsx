@@ -3,6 +3,9 @@ import { prisma } from "@livo/db";
 import type { Metadata } from "next";
 import { Money } from "@/components/patterns/Money.js";
 import { ProvenanceChip } from "@/components/patterns/ProvenanceChip.js";
+import { ContactReveal } from "@/components/patterns/ContactReveal.js";
+import { REPORT_REASONS } from "@/modules/places/index.js";
+import { submitReportAction } from "@/app/actions/places.js";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +40,21 @@ const BASIS_SUFFIX: Record<string, string> = {
  * implemented yet (no photo pipeline / MapLibre wiring); everything shown
  * is a real DB fact with its provenance, never invented copy.
  */
-export default async function PlaceDetailPage({ params }: { params: { slug: string } }) {
+const REASON_LABEL: Record<string, string> = {
+  WRONG_PRICE: "Price is wrong",
+  CLOSED: "This place has closed",
+  WRONG_LOCATION: "Location/pin is wrong",
+  FAKE: "This listing looks fake",
+  OTHER: "Something else",
+};
+
+export default async function PlaceDetailPage({
+  params,
+  searchParams,
+}: {
+  params: { slug: string };
+  searchParams: { reported?: string; reportError?: string };
+}) {
   const place = await getPlace(params.slug);
   if (!place) notFound();
 
@@ -112,9 +129,46 @@ export default async function PlaceDetailPage({ params }: { params: { slug: stri
         </section>
       )}
 
+      <section className="mt-6">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Contact</h2>
+        <ContactReveal placeId={place.id} />
+      </section>
+
+      <section className="mt-8 border-t border-slate-200 pt-6">
+        <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-600">Report a problem</h2>
+        {searchParams.reported ? (
+          <p className="text-sm text-emerald-800">Thanks — we&apos;ll take a look.</p>
+        ) : (
+          <form action={submitReportAction} className="max-w-sm space-y-2">
+            <input type="hidden" name="placeId" value={place.id} />
+            <input type="hidden" name="placeSlug" value={place.slug} />
+            <select name="reason" required className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm">
+              {REPORT_REASONS.map((r) => (
+                <option key={r} value={r}>
+                  {REASON_LABEL[r]}
+                </option>
+              ))}
+            </select>
+            <textarea
+              name="detail"
+              maxLength={1000}
+              placeholder="Anything else we should know? (optional)"
+              className="w-full rounded border border-slate-300 px-2 py-1.5 text-sm"
+              rows={2}
+            />
+            <button
+              type="submit"
+              className="rounded border border-slate-300 px-3 py-1.5 text-sm text-slate-700 hover:border-teal-600"
+            >
+              Submit report
+            </button>
+            {searchParams.reportError && <p className="text-sm text-red-700">{searchParams.reportError}</p>}
+          </form>
+        )}
+      </section>
+
       <p className="mt-8 text-xs text-slate-600">
-        Report a problem with this listing — coming soon. Every price shown here is either verified by our team or
-        clearly labelled as an estimate.
+        Every price shown here is either verified by our team or clearly labelled as an estimate.
       </p>
     </main>
   );
