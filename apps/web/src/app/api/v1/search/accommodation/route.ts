@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
-import { AccommodationSearchQuery } from "@livo/schemas";
 import { searchAccommodation } from "@/modules/search/index.js";
+import { parseAccommodationSearchParams } from "@/modules/search/query.js";
 import { jsonResponse } from "@/lib/json.js";
 
 /**
@@ -9,23 +9,7 @@ import { jsonResponse } from "@/lib/json.js";
  * Zod schema before it reaches the search service.
  */
 export async function GET(req: NextRequest) {
-  const raw = Object.fromEntries(req.nextUrl.searchParams.entries());
-
-  // Array/boolean/number query params arrive as strings; coerce the ones
-  // the schema expects to be richer types before validating.
-  const candidate: Record<string, unknown> = { ...raw };
-  for (const key of ["kinds", "amenities"] as const) {
-    if (typeof raw[key] === "string") candidate[key] = raw[key].split(",").filter(Boolean);
-  }
-  for (const key of ["ac", "privateBath", "foodIncluded", "verifiedOnly"] as const) {
-    if (raw[key] != null) candidate[key] = raw[key] === "true";
-  }
-  for (const key of ["people", "priceMin", "priceMax", "maxCommuteMin", "limit"] as const) {
-    if (raw[key] != null) candidate[key] = Number(raw[key]);
-  }
-  if (raw.radiusKm != null) candidate.radiusKm = Number(raw.radiusKm);
-
-  const parsed = AccommodationSearchQuery.safeParse(candidate);
+  const parsed = parseAccommodationSearchParams(Object.fromEntries(req.nextUrl.searchParams.entries()));
   if (!parsed.success) {
     return jsonResponse(
       {
