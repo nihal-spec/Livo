@@ -3,6 +3,8 @@ import { prisma } from "@livo/db";
 import { searchFood } from "@/modules/search/food.js";
 import { parseFoodSearchParams } from "@/modules/search/foodQuery.js";
 import { FoodListingCard } from "@/components/patterns/FoodListingCard.js";
+import { MapView } from "@/components/patterns/MapView.js";
+import { centerOf, foodMarkers } from "@/lib/mapMarkers.js";
 
 export const dynamic = "force-dynamic";
 
@@ -124,22 +126,36 @@ export default async function FoodSearchPage({
         </button>
       </form>
 
-      {result.items.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-          <p className="font-medium text-slate-900">Nothing matches those filters yet.</p>
-        </div>
-      ) : (
-        <ul className="space-y-3">
-          {result.items.map((item) => (
-            <FoodListingCard
-              key={item.foodPlan.id}
-              item={item}
-              destinationId={result.destination.id}
-              destinationName={result.destination.name}
+      <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+        {result.items.length === 0 ? (
+          <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
+            <p className="font-medium text-slate-900">Nothing matches those filters yet.</p>
+          </div>
+        ) : (
+          <ul className="space-y-3">
+            {result.items.map((item) => (
+              <FoodListingCard
+                key={item.foodPlan.id}
+                item={item}
+                destinationId={result.destination.id}
+                destinationName={result.destination.name}
+              />
+            ))}
+          </ul>
+        )}
+
+        {result.items.length > 0 && (
+          <div className="mt-6 h-72 lg:sticky lg:top-6 lg:mt-0 lg:h-[calc(100vh-3rem)] lg:max-h-[600px]">
+            <MapView
+              markers={foodMarkers(result.items)}
+              center={centerOf(
+                result.items.map((i) => i.location),
+                result.items[0].location,
+              )}
             />
-          ))}
-        </ul>
-      )}
+          </div>
+        )}
+      </div>
     </main>
   );
 }

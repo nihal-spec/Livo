@@ -6,6 +6,8 @@ import { searchAccommodation } from "@/modules/search/index.js";
 import { parseAccommodationSearchParams } from "@/modules/search/query.js";
 import { ListingCard } from "@/components/patterns/ListingCard.js";
 import { CompareBar } from "@/components/patterns/CompareBar.js";
+import { MapView } from "@/components/patterns/MapView.js";
+import { accommodationMarkers, centerOf } from "@/lib/mapMarkers.js";
 
 export const dynamic = "force-dynamic";
 
@@ -17,10 +19,11 @@ const SORTS = [
 ] as const;
 
 /**
- * Search results (UX_UI_SPEC.md §5.6). List-only for now — the map view
- * (MapLibre + tile provider, ADR-010) is not wired up yet; the list is
- * fully usable on its own, which the spec requires regardless
- * ("Map unavailable" must never block search).
+ * Search results (UX_UI_SPEC.md §5.6). The map (ADR-010: MapLibre + OSM
+ * tiles) sits alongside the list, never in front of it — per the spec's
+ * own edge case, the list must stay fully usable even when the map can't
+ * load (no WebGL, tile fetch failure, etc.), so it's laid out and
+ * rendered independently of MapView's own success/failure state.
  */
 export default async function SearchPage({
   searchParams,
@@ -133,20 +136,34 @@ export default async function SearchPage({
         </button>
       </form>
 
-      {result.items.length === 0 ? (
-        <EmptyState nearMisses={result.nearMisses} />
-      ) : (
-        <ul className="space-y-3">
-          {result.items.map((item) => (
-            <ListingCard
-              key={`${item.placeId}-${item.room.id}`}
-              item={item}
-              destinationId={result.destination.id}
-              destinationName={result.destination.name}
+      <div className="lg:grid lg:grid-cols-[1fr_360px] lg:items-start lg:gap-6">
+        {result.items.length === 0 ? (
+          <EmptyState nearMisses={result.nearMisses} />
+        ) : (
+          <ul className="space-y-3">
+            {result.items.map((item) => (
+              <ListingCard
+                key={`${item.placeId}-${item.room.id}`}
+                item={item}
+                destinationId={result.destination.id}
+                destinationName={result.destination.name}
+              />
+            ))}
+          </ul>
+        )}
+
+        {result.items.length > 0 && (
+          <div className="mt-6 h-72 lg:sticky lg:top-6 lg:mt-0 lg:h-[calc(100vh-3rem)] lg:max-h-[600px]">
+            <MapView
+              markers={accommodationMarkers(result.items)}
+              center={centerOf(
+                result.items.map((i) => i.location),
+                result.items[0].location,
+              )}
             />
-          ))}
-        </ul>
-      )}
+          </div>
+        )}
+      </div>
 
       <Suspense fallback={null}>
         <CompareBar destinationId={result.destination.id} />
