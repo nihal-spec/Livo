@@ -6,6 +6,11 @@
 generator client {
   provider = "prisma-client-js"
   previewFeatures = ["typedSql"]
+  // "native" covers local dev / this sandbox (Debian-based); Vercel's
+  // serverless functions run on Amazon Linux 2023, which needs the
+  // rhel-openssl-3.0.x engine explicitly — Prisma only bundles binaries
+  // for targets listed here, not just whatever `generate` ran on.
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
