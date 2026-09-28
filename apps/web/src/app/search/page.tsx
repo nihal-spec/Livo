@@ -76,9 +76,13 @@ export default async function SearchPage({
   }
 
   const anchors = await prisma.destination.findMany({ where: { isAnchor: true }, orderBy: { name: "asc" } });
+  const aiNote = typeof searchParams.aiNote === "string" ? searchParams.aiNote : null;
 
   return (
     <main className="mx-auto max-w-4xl px-4 py-8">
+      {aiNote && (
+        <p className="mb-4 rounded-lg border border-teal-200 bg-teal-50 px-3 py-2 text-sm text-teal-900">{aiNote}</p>
+      )}
       <header className="mb-6">
         <h1 className="text-xl font-semibold text-slate-900">
           Places to stay near {result.destination.name}

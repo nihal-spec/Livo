@@ -12,10 +12,12 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@ai-sdk/groq": "^4.0.50",
     "@auth/prisma-adapter": "^2.11.3",
     "@livo/budget-engine": "workspace:*",
     "@livo/db": "workspace:*",
     "@livo/schemas": "workspace:*",
+    "ai": "^7.0.118",
     "maplibre-gl": "^6.11.2",
     "next": "14.2.35",
     "next-auth": "5.0.0-beta.32",

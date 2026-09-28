@@ -34,6 +34,11 @@ export default async function Home() {
         {totalPlaces} places listed{verifiedProvenance > 0 ? `, ${verifiedProvenance} facts verified by phone` : ""}.
         No invented prices — every number shows where it came from.
       </p>
+      <p className="mt-2 text-sm">
+        <Link href="/intake" className="text-teal-700 underline">
+          Or just describe your trip and we&apos;ll search for you →
+        </Link>
+      </p>
 
       <form method="GET" action="/search" className="mt-8 flex gap-2">
         <label htmlFor="destinationId" className="sr-only">
