@@ -15,16 +15,19 @@ const EnvSchema = z.object({
     .min(process.env.NODE_ENV === "production" ? 32 : 1)
     .default("dev-only-insecure-secret-change-me"),
 
-  // Auth.js (added when task 4 wires it up); optional until then.
+  // Auth.js v5 (ADR-007/008: Google OAuth, database sessions via the
+  // Prisma adapter). Optional so the app still boots without them — sign-in
+  // degrades to "unavailable," guest sessions keep working regardless.
   AUTH_SECRET: z.string().min(1).optional(),
-  AUTH_GOOGLE_ID: z.string().optional(),
-  AUTH_GOOGLE_SECRET: z.string().optional(),
+  GOOGLE_CLIENT_ID: z.string().optional(),
+  GOOGLE_CLIENT_SECRET: z.string().optional(),
 
   // External providers — optional in local/dev so the app degrades
   // gracefully (AI_ARCHITECTURE.md §10, ARCHITECTURE.md §9 "config refuses
   // to boot on invalid config" applies to malformed values, not absence).
   ANTHROPIC_API_KEY: z.string().optional(),
   OPENAI_API_KEY: z.string().optional(),
+  GROQ_API_KEY: z.string().optional(),
   GOOGLE_MAPS_SERVER_KEY: z.string().optional(),
   UPSTASH_REDIS_REST_URL: z.string().url().optional(),
   UPSTASH_REDIS_REST_TOKEN: z.string().optional(),

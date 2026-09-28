@@ -1,16 +1,23 @@
 import { cookies } from "next/headers";
+import { auth } from "@/auth.js";
 import { createGuestSession, findGuestSessionByToken, touchGuestSession, GUEST_COOKIE_NAME } from "./session.js";
 import type { Viewer } from "./session.js";
 
 const GUEST_COOKIE_MAX_AGE_S = 30 * 24 * 60 * 60;
 
 /**
- * Same guest-session resolution as resolveViewer.ts, but for Server
- * Actions and Route Handlers using next/headers' `cookies()` instead of a
- * NextRequest — the two entry points need different cookie APIs, but must
- * agree on the underlying session semantics (ADR-008).
+ * Same viewer resolution as resolveViewer.ts (signed-in user takes
+ * priority over the guest cookie), but for Server Actions and Route
+ * Handlers using next/headers' `cookies()` instead of a NextRequest — the
+ * two entry points need different cookie APIs, but must agree on the
+ * underlying session semantics (ADR-007/008).
  */
 export async function resolveViewerForAction(): Promise<Viewer> {
+  const session = await auth();
+  if (session?.user?.id) {
+    return { kind: "user", userId: session.user.id };
+  }
+
   const store = cookies();
   const cookieValue = store.get(GUEST_COOKIE_NAME)?.value;
 
@@ -40,6 +47,11 @@ export async function resolveViewerForAction(): Promise<Viewer> {
  * they simply can't own anything until they hit a Server Action.
  */
 export async function resolveViewerReadOnly(): Promise<Viewer> {
+  const authSession = await auth();
+  if (authSession?.user?.id) {
+    return { kind: "user", userId: authSession.user.id };
+  }
+
   const store = cookies();
   const cookieValue = store.get(GUEST_COOKIE_NAME)?.value;
   if (!cookieValue) return { kind: "anonymous" };

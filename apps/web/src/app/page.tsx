@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { Suspense } from "react";
 import { prisma } from "@livo/db";
+import { AuthStatus } from "@/components/patterns/AuthStatus.js";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +19,10 @@ export default async function Home() {
 
   return (
     <main className="mx-auto max-w-2xl px-4 py-16">
-      <div className="mb-4 text-right">
+      <div className="mb-4 flex items-center justify-end gap-4">
+        <Suspense fallback={null}>
+          <AuthStatus />
+        </Suspense>
         <Link href="/plans" className="text-sm text-teal-700 underline">
           My plans →
         </Link>
