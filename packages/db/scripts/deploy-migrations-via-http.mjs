@@ -2,6 +2,17 @@ import { neon } from "@neondatabase/serverless";
 import { readFileSync, readdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
+import { setGlobalDispatcher, ProxyAgent } from "undici";
+
+// Node's native fetch (undici under the hood) does NOT automatically
+// honor HTTPS_PROXY the way curl and most other tools do — it has to be
+// wired up explicitly, or requests go out directly and hit whatever
+// happens on the other side of that (in the sandbox this was written for,
+// a transparent network-level deny that returns a look-alike "Host not in
+// allowlist" 403, easy to mistake for the real proxy's own denial).
+if (process.env.HTTPS_PROXY || process.env.https_proxy) {
+  setGlobalDispatcher(new ProxyAgent(process.env.HTTPS_PROXY || process.env.https_proxy));
+}
 
 /**
  * Fallback for `prisma migrate deploy` in an environment that can only
