@@ -70,6 +70,7 @@ export const AccommodationSearchItem = z.object({
   monthlyTotalPaise: paiseSchema.nullable(),
   reasons: z.array(z.object({ code: ReasonCode, value: z.string().optional() })),
   sponsored: z.boolean().default(false),
+  isSample: z.boolean().default(false),
 });
 export type AccommodationSearchItem = z.infer<typeof AccommodationSearchItem>;
 
@@ -121,6 +122,7 @@ export const FoodSearchItem = z.object({
   }),
   distanceM: z.number().int(),
   reasons: z.array(z.object({ code: ReasonCode, value: z.string().optional() })),
+  isSample: z.boolean().default(false),
 });
 export type FoodSearchItem = z.infer<typeof FoodSearchItem>;
 

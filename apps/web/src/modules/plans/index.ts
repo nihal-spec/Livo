@@ -84,6 +84,17 @@ export async function listPlans(viewer: Viewer) {
   });
 }
 
+/** The plan with this id if the viewer owns it, else null — never throws. */
+export async function findOwnedPlan(planId: string, viewer: Viewer) {
+  if (viewer.kind === "anonymous") return null;
+  const plan = await prisma.plan.findUnique({ where: { id: planId } });
+  if (!plan || plan.deletedAt) return null;
+  const owns =
+    (viewer.kind === "user" && plan.ownerUserId === viewer.userId) ||
+    (viewer.kind === "guest" && plan.guestSessionId === viewer.guestSessionId);
+  return owns ? plan : null;
+}
+
 export async function getPlan(planId: string, viewer: Viewer, shareToken?: string) {
   const plan = await prisma.plan.findUnique({
     where: { id: planId },
@@ -116,6 +127,56 @@ export async function addPlanItem(planId: string, viewer: Viewer, input: AddItem
       foodPlanId: input.foodPlanId,
       custom: input.custom as never,
       position,
+    },
+  });
+}
+
+/**
+ * A plan holds at most one stay and one food plan (the wizard's "Stay"
+ * and "Food" steps) — picking a new one replaces the old, atomically.
+ */
+export async function setPlanItem(
+  planId: string,
+  viewer: Viewer,
+  input: { kind: "ACCOMMODATION"; roomOptionId: string } | { kind: "FOOD"; foodPlanId: string },
+) {
+  const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
+  assertOwns(plan, viewer);
+
+  return prisma.$transaction(async (tx) => {
+    await tx.planItem.deleteMany({ where: { planId, kind: input.kind } });
+    const position = await tx.planItem.count({ where: { planId } });
+    return tx.planItem.create({
+      data: {
+        planId,
+        kind: input.kind,
+        roomOptionId: input.kind === "ACCOMMODATION" ? input.roomOptionId : null,
+        foodPlanId: input.kind === "FOOD" ? input.foodPlanId : null,
+        position,
+      },
+    });
+  });
+}
+
+export interface PlanDetailsInput {
+  startDate: string;
+  endDate: string;
+  budgetCapPaise: bigint | null;
+  monthlyIncomePaise: bigint | null;
+  cashOnHandPaise: bigint | null;
+}
+
+export async function updatePlanDetails(planId: string, viewer: Viewer, input: PlanDetailsInput) {
+  const plan = await prisma.plan.findUniqueOrThrow({ where: { id: planId } });
+  assertOwns(plan, viewer);
+  return prisma.plan.update({
+    where: { id: planId },
+    data: {
+      startDate: new Date(input.startDate),
+      endDate: new Date(input.endDate),
+      budgetCapPaise: input.budgetCapPaise,
+      monthlyIncomePaise: input.monthlyIncomePaise,
+      cashOnHandPaise: input.cashOnHandPaise,
     },
   });
 }

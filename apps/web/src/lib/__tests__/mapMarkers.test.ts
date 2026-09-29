@@ -23,6 +23,7 @@ function accItem(overrides: Partial<AccommodationSearchItem> = {}): Accommodatio
     monthlyTotalPaise: 500_000n,
     reasons: [],
     sponsored: false,
+    isSample: false,
     ...overrides,
   };
 }
@@ -44,6 +45,7 @@ function foodItem(overrides: Partial<FoodSearchItem> = {}): FoodSearchItem {
     },
     distanceM: 500,
     reasons: [],
+    isSample: false,
     ...overrides,
   };
 }

@@ -16,6 +16,8 @@ test.describe("saved plans list", () => {
     await page.goto("/");
     await page.selectOption('select[name="destinationId"]', { label: "Infopark Phase 1" });
     await page.getByRole("button", { name: /see places/i }).click();
+    await expect(page).toHaveURL(/\/plan\//);
+    await page.getByRole("link", { name: /find a place to stay/i }).click();
     await expect(page).toHaveURL(/\/search\?/);
 
     const firstCard = page.locator("li").filter({ hasText: "Add to plan" }).first();
@@ -23,7 +25,7 @@ test.describe("saved plans list", () => {
     await expect(page).toHaveURL(/\/plan\//);
     const planUrl = page.url();
 
-    await page.getByRole("link", { name: /my plans/i }).click();
+    await page.getByRole("banner").getByRole("link", { name: /my plans/i }).click();
     await expect(page).toHaveURL(/\/plans$/);
     await expect(page.getByText("No plans yet.")).toHaveCount(0);
     await expect(page.getByText("Job relocation · Infopark Phase 1")).toBeVisible();
@@ -33,10 +35,11 @@ test.describe("saved plans list", () => {
     await expect(page).toHaveURL(planUrl);
   });
 
-  test("a share-view visitor does not see the My plans link (read-only)", async ({ page, browser }) => {
+  test("a share-view visitor gets a read-only view without the owner's back link", async ({ page, browser }) => {
     await page.goto("/");
     await page.selectOption('select[name="destinationId"]', { label: "Infopark Phase 1" });
     await page.getByRole("button", { name: /see places/i }).click();
+    await page.getByRole("link", { name: /find a place to stay/i }).click();
     const firstCard = page.locator("li").filter({ hasText: "Add to plan" }).first();
     await firstCard.getByRole("button", { name: "Add to plan" }).click();
     await page.getByRole("button", { name: /get a share link/i }).click();
@@ -45,7 +48,11 @@ test.describe("saved plans list", () => {
     const otherContext = await browser.newContext();
     const otherPage = await otherContext.newPage();
     await otherPage.goto(shareUrl);
-    await expect(otherPage.getByRole("link", { name: /my plans/i })).toHaveCount(0);
+    await expect(otherPage.getByText("You're viewing a shared, read-only copy of this plan.")).toBeVisible();
+    // The site header links to the visitor's *own* plans; the plan itself
+    // must not offer the owner's "back to My plans" link or edit controls.
+    await expect(otherPage.getByRole("main").getByRole("link", { name: /my plans/i })).toHaveCount(0);
+    await expect(otherPage.getByRole("button", { name: "Save details" })).toHaveCount(0);
     await otherContext.close();
   });
 });

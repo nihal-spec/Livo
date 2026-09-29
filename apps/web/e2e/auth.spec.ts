@@ -47,9 +47,11 @@ test.describe("sign-in", () => {
     await page.goto("/");
     await page.selectOption('select[name="destinationId"]', { label: "Infopark Phase 1" });
     await page.getByRole("button", { name: /see places/i }).click();
+    await expect(page).toHaveURL(/\/plan\//);
+    await page.getByRole("link", { name: /find a place to stay/i }).click();
     const firstCard = page.locator("li").filter({ hasText: "Add to plan" }).first();
     await firstCard.getByRole("button", { name: "Add to plan" }).click();
     await expect(page).toHaveURL(/\/plan\//);
-    await expect(page.getByText("Budget")).toBeVisible();
+    await expect(page.getByText("Trip total")).toBeVisible();
   });
 });

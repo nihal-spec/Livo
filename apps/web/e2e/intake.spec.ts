@@ -41,7 +41,7 @@ test.describe("AI intake", () => {
     // The textarea is `required`, so bypass native validation to exercise
     // the server-side empty-text branch directly.
     await page.evaluate(() => {
-      const form = document.querySelector("form");
+      const form = document.querySelector("form:has(textarea)");
       form?.removeAttribute("novalidate");
       const textarea = form?.querySelector("textarea");
       textarea?.removeAttribute("required");

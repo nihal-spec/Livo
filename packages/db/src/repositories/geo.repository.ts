@@ -55,6 +55,7 @@ export interface AccommodationCandidate {
   kind: string | null;
   genderPolicy: string | null;
   foodIncluded: boolean | null;
+  isSample: boolean;
 }
 
 export interface AccommodationCandidateFilters {
@@ -110,6 +111,7 @@ export async function findAccommodationCandidates(
       kind: string | null;
       genderPolicy: string | null;
       foodIncluded: boolean | null;
+      isSample: boolean;
     }>
   >`
     SELECT
@@ -128,7 +130,8 @@ export async function findAccommodationCandidates(
       ro."occupancy"    AS "occupancy",
       ad."kind"         AS "kind",
       ad."genderPolicy" AS "genderPolicy",
-      ad."foodIncluded" AS "foodIncluded"
+      ad."foodIncluded" AS "foodIncluded",
+      COALESCE((p."attributes"->>'sample')::boolean, (p."attributes"->>'synthetic')::boolean, false) AS "isSample"
     FROM "place" p
     JOIN "destination" d ON d."id" = ${destinationId}
     JOIN "room_option" ro ON ro."placeId" = p."id"
@@ -164,6 +167,7 @@ export interface FoodCandidate {
   meals: string[];
   pricePaise: bigint;
   priceBasis: string;
+  isSample: boolean;
 }
 
 export interface FoodCandidateFilters {
@@ -200,6 +204,7 @@ export async function findFoodCandidates(filters: FoodCandidateFilters): Promise
       meals: string[];
       pricePaise: bigint;
       priceBasis: string;
+      isSample: boolean;
     }>
   >`
     SELECT
@@ -215,7 +220,8 @@ export async function findFoodCandidates(filters: FoodCandidateFilters): Promise
       fp."delivers"    AS "delivers",
       fp."meals"       AS "meals",
       fp."pricePaise"  AS "pricePaise",
-      fp."priceBasis"  AS "priceBasis"
+      fp."priceBasis"  AS "priceBasis",
+      COALESCE((p."attributes"->>'sample')::boolean, (p."attributes"->>'synthetic')::boolean, false) AS "isSample"
     FROM "place" p
     JOIN "destination" d ON d."id" = ${destinationId}
     JOIN "food_plan" fp ON fp."placeId" = p."id"

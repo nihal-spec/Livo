@@ -166,6 +166,7 @@ export async function searchAccommodation(query: AccommodationSearchQuery): Prom
       monthlyTotalPaise: e.monthlyTotal,
       reasons,
       sponsored: false,
+      isSample: e.c.isSample,
     };
     return { item, paretoRank: ranks[i] };
   });

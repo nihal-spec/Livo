@@ -40,7 +40,7 @@ test.describe("food search journey", () => {
     await expect(page).toHaveURL(/\/plan\//);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Stay near Infopark Phase 1");
     await expect(page.getByText("meal plan")).toBeVisible();
-    await expect(page.getByText("Budget")).toBeVisible();
+    await expect(page.getByText("Trip total")).toBeVisible();
     await expect(page.getByText(/₹[\d,]+/).first()).toBeVisible();
   });
 

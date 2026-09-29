@@ -20,7 +20,10 @@ test.describe("core guest journey", () => {
     await page.selectOption('select[name="destinationId"]', { label: "Infopark Phase 1" });
     await page.getByRole("button", { name: /see places/i }).click();
 
-    await expect(page).toHaveURL(/\/search\?/);
+    // The landing form starts a plan (guided wizard); step 1 is the stay.
+    await expect(page).toHaveURL(/\/plan\//);
+    await page.getByRole("link", { name: /find a place to stay/i }).click();
+    await expect(page).toHaveURL(/\/search\?.*planId=/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Places to stay near");
     const cards = page.locator("li", { has: page.getByText("Add to plan") });
     await expect(cards.first()).toBeVisible();
@@ -34,7 +37,7 @@ test.describe("core guest journey", () => {
 
     await expect(page).toHaveURL(/\/plan\//);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Stay near Infopark Phase 1");
-    await expect(page.getByText("Budget")).toBeVisible();
+    await expect(page.getByText("Trip total")).toBeVisible();
     await expect(page.getByText("Trip total")).toBeVisible();
     await expect(page.getByText(/₹[\d,]+/).first()).toBeVisible();
   });
@@ -51,7 +54,7 @@ test.describe("core guest journey", () => {
     await page.getByRole("link", { name: /Compare \(2\)/ }).click();
     await expect(page).toHaveURL(/\/compare\?/);
     await expect(page.getByRole("heading", { level: 1 })).toContainText("Compare 2 places");
-    await expect(page.getByText("Price")).toBeVisible();
+    await expect(page.getByRole("rowheader", { name: "Price" })).toBeVisible();
     await expect(page.getByText(/is cheaper than/)).toBeVisible();
   });
 

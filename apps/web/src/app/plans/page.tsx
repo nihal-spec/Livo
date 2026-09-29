@@ -1,6 +1,9 @@
 import Link from "next/link";
+import { CalendarDays, ChevronRight, FolderOpen, MapPin, Plus, Share2 } from "lucide-react";
 import { resolveViewerReadOnly } from "@/modules/auth/index.js";
 import { listPlans } from "@/modules/plans/index.js";
+import { Badge, ButtonLink, EmptyState, PageHeader } from "@/components/ui/index.js";
+import { Money } from "@/components/patterns/Money.js";
 
 export const dynamic = "force-dynamic";
 
@@ -25,54 +28,75 @@ function dateRange(start: Date, end: Date): string {
 
 /**
  * Saved plans list (MASTER_PLAN.md §39, V1 item). Guest-first (ADR-008):
- * "saved" here means "owned by this browser's guest session" — there is
- * no sign-in yet, so a plan made in a different browser or after clearing
- * cookies won't show up here. That's an accepted MVP limitation, not a bug.
+ * without sign-in, "saved" means "owned by this browser's guest session".
  */
 export default async function PlansPage() {
   const viewer = await resolveViewerReadOnly();
   const plans = viewer.kind === "anonymous" ? [] : await listPlans(viewer);
 
   return (
-    <main className="mx-auto max-w-2xl px-4 py-8">
-      <header className="mb-6 flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-slate-900">My plans</h1>
-        <Link href="/" className="text-sm text-teal-700 underline">
-          Start a new search
-        </Link>
-      </header>
+    <main className="mx-auto max-w-4xl px-4 py-10">
+      <PageHeader
+        title="My plans"
+        description={viewer.kind === "user" ? "Saved to your account." : "Saved in this browser. Sign in to keep them across devices."}
+        actions={
+          <ButtonLink href="/">
+            <Plus className="h-4 w-4" aria-hidden />
+            New plan
+          </ButtonLink>
+        }
+      />
 
       {plans.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-slate-300 p-8 text-center">
-          <p className="font-medium text-slate-900">No plans yet.</p>
-          <p className="mt-1 text-sm text-slate-600">
-            Search for a place to stay and use &quot;Add to plan&quot; to start one.
-          </p>
-          <Link href="/" className="mt-3 inline-block text-teal-700 underline">
-            Start a search
-          </Link>
-        </div>
+        <EmptyState
+          icon={<FolderOpen className="h-5 w-5" />}
+          title="No plans yet."
+          description="Tell us where you need to be and we'll help you plan the stay, food and budget."
+          action={<ButtonLink href="/">Start a plan</ButtonLink>}
+        />
       ) : (
-        <ul className="space-y-3">
-          {plans.map((plan) => (
-            <li key={plan.id} className="rounded-lg border border-slate-200 p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <Link href={`/plan/${plan.id}`} className="font-semibold text-slate-900 hover:underline">
-                    {plan.title}
-                  </Link>
-                  <div className="text-sm text-slate-600">
-                    {PURPOSE_LABEL[plan.purpose] ?? plan.purpose} · {plan.destination.name}
+        <ul className="grid gap-4 sm:grid-cols-2">
+          {plans.map((plan) => {
+            const stays = plan.items.filter((i) => i.kind === "ACCOMMODATION").length;
+            return (
+              <li key={plan.id}>
+                <Link
+                  href={`/plan/${plan.id}`}
+                  className="group flex h-full flex-col rounded-2xl border border-slate-200/80 bg-white p-5 shadow-card transition-shadow hover:shadow-lift"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-semibold text-ink group-hover:underline">{plan.title}</span>
+                    <ChevronRight className="h-5 w-5 shrink-0 text-slate-400" aria-hidden />
                   </div>
-                  <div className="text-sm text-slate-600">{dateRange(plan.startDate, plan.endDate)}</div>
-                </div>
-                <div className="shrink-0 text-right text-sm text-slate-600">
-                  {plan.items.length} {plan.items.length === 1 ? "item" : "items"}
-                  {plan.shareToken && <div className="mt-1 text-xs text-teal-700">Shared</div>}
-                </div>
-              </div>
-            </li>
-          ))}
+                  <div className="mt-2 space-y-1 text-sm text-slate-600">
+                    <p className="flex items-center gap-1.5">
+                      <MapPin className="h-4 w-4" aria-hidden />
+                      {PURPOSE_LABEL[plan.purpose] ?? plan.purpose} · {plan.destination.name}
+                    </p>
+                    <p className="flex items-center gap-1.5">
+                      <CalendarDays className="h-4 w-4" aria-hidden />
+                      {dateRange(plan.startDate, plan.endDate)}
+                    </p>
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Badge tone={stays > 0 ? "brand" : "neutral"}>
+                      {plan.items.length} {plan.items.length === 1 ? "item" : "items"}
+                    </Badge>
+                    {plan.budgetCapPaise != null && (
+                      <Badge>
+                        Budget <Money paise={plan.budgetCapPaise} suffix="/mo" />
+                      </Badge>
+                    )}
+                    {plan.shareToken && (
+                      <Badge tone="violet">
+                        <Share2 className="h-3 w-3" aria-hidden /> Shared
+                      </Badge>
+                    )}
+                  </div>
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       )}
     </main>

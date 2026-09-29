@@ -34,8 +34,13 @@ export function CompareToggle({ compareId }: { compareId: string }) {
   }
 
   return (
-    <label className="inline-flex items-center gap-1.5 text-sm text-slate-600">
-      <input type="checkbox" checked={checked} disabled={atLimit} onChange={toggle} />
+    <label
+      className={`inline-flex cursor-pointer select-none items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors ${
+        checked ? "bg-slate-900 text-white" : "text-slate-600 hover:bg-slate-100"
+      } ${atLimit ? "cursor-not-allowed opacity-50" : ""}`}
+      title={atLimit ? "You can compare up to 3 places" : undefined}
+    >
+      <input type="checkbox" className="h-3.5 w-3.5 accent-brand-600" checked={checked} disabled={atLimit} onChange={toggle} />
       Compare
     </label>
   );

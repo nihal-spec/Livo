@@ -25,7 +25,7 @@ export function ReasonChips({ reasons }: { reasons: Array<{ code: ReasonCode; va
       {reasons.map((r, i) => (
         <li
           key={`${r.code}-${i}`}
-          className="rounded-full border border-teal-200 bg-teal-50 px-2 py-0.5 text-xs font-medium text-teal-800"
+          className="rounded-full bg-brand-50 px-2.5 py-0.5 text-xs font-medium text-brand-800 ring-1 ring-inset ring-brand-200"
         >
           {(REASON_TEXT[r.code] ?? (() => r.code))(r.value)}
         </li>

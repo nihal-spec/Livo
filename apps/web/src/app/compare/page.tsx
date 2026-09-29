@@ -2,7 +2,10 @@ import Link from "next/link";
 import { prisma } from "@livo/db";
 import { getDistanceToDestination } from "@livo/db/geo";
 import { estimateByDistance } from "@/modules/search/estimate.js";
+import { Scale } from "lucide-react";
 import { Money } from "@/components/patterns/Money.js";
+import { PlaceVisual } from "@/components/patterns/PlaceVisual.js";
+import { Badge, ButtonLink, Card, EmptyState, Notice, PageHeader } from "@/components/ui/index.js";
 
 export const dynamic = "force-dynamic";
 
@@ -80,12 +83,13 @@ export default async function ComparePage({
 
   if (ids.length < 2 || !destinationId) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Nothing to compare yet</h1>
-        <p className="mt-2 text-slate-600">
-          Go back to <Link href="/" className="text-teal-700 underline">search</Link> and tick &quot;Compare&quot; on
-          2–3 listings.
-        </p>
+      <main className="mx-auto max-w-xl px-4 py-20">
+        <EmptyState
+          icon={<Scale className="h-5 w-5" />}
+          title="Nothing to compare yet"
+          description='Tick "Compare" on 2–3 listings in search results.'
+          action={<ButtonLink href="/">Start searching</ButtonLink>}
+        />
       </main>
     );
   }
@@ -96,8 +100,8 @@ export default async function ComparePage({
 
   if (rows.length < 2) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <h1 className="text-xl font-semibold text-slate-900">Couldn&apos;t load enough listings to compare</h1>
+      <main className="mx-auto max-w-xl px-4 py-20">
+        <EmptyState title="Couldn't load enough listings to compare" action={<ButtonLink href="/">Back to search</ButtonLink>} />
       </main>
     );
   }
@@ -106,20 +110,38 @@ export default async function ComparePage({
   const closest = rows.reduce((a, b) => ((a.distanceM ?? Infinity) < (b.distanceM ?? Infinity) ? a : b));
 
   return (
-    <main className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-4 text-xl font-semibold text-slate-900">Compare {rows.length} places</h1>
+    <main className="mx-auto max-w-5xl px-4 py-8">
+      <PageHeader
+        title={`Compare ${rows.length} places`}
+        eyebrow={
+          <Link href={`/search?destinationId=${destinationId}`} className="font-medium hover:text-ink">
+            ← Back to results
+          </Link>
+        }
+      />
 
-      <div className="overflow-x-auto">
+      {rows.length === 2 && (
+        <div className="mb-5">
+          <Notice icon={<Scale className="h-4 w-4" />}>{tradeOffSentence(rows[0], rows[1])}</Notice>
+        </div>
+      )}
+
+      <Card className="overflow-x-auto p-2 sm:p-4">
         <table className="w-full min-w-[560px] border-collapse text-sm">
           <caption className="sr-only">Side-by-side comparison of selected accommodation listings</caption>
           <thead>
             <tr>
               <th className="w-32 py-2 text-left text-slate-600">&nbsp;</th>
               {rows.map((r) => (
-                <th key={r.placeId} className="py-2 text-left">
-                  <Link href={`/p/${r.slug}`} className="font-semibold text-slate-900 hover:underline">
+                <th key={r.placeId} className="p-2 text-left align-top">
+                  <PlaceVisual id={r.placeId} kind={r.kind ?? "PG"} className="mb-2 h-20 w-full rounded-xl" />
+                  <Link href={`/p/${r.slug}`} className="font-semibold text-ink hover:underline">
                     {r.name}
                   </Link>
+                  <div className="mt-1 flex flex-wrap gap-1">
+                    {r === cheapest && <Badge tone="brand">Cheapest</Badge>}
+                    {r === closest && <Badge tone="brand">Closest</Badge>}
+                  </div>
                 </th>
               ))}
             </tr>
@@ -128,7 +150,7 @@ export default async function ComparePage({
             <CompareRowTr
               label="Price"
               cells={rows.map((r) => (
-                <span key={r.placeId} className={r === cheapest ? "font-semibold text-emerald-800" : undefined}>
+                <span key={r.placeId} className={r === cheapest ? "font-semibold text-brand-700" : undefined}>
                   <Money paise={r.pricePaise} suffix={BASIS_SUFFIX[r.priceBasis] ?? ""} />
                 </span>
               ))}
@@ -140,7 +162,7 @@ export default async function ComparePage({
             <CompareRowTr
               label="Commute"
               cells={rows.map((r) => (
-                <span key={r.placeId} className={r === closest ? "font-semibold text-emerald-800" : undefined}>
+                <span key={r.placeId} className={r === closest ? "font-semibold text-brand-700" : undefined}>
                   {r.commuteMinRange}
                 </span>
               ))}
@@ -152,13 +174,7 @@ export default async function ComparePage({
             <CompareRowTr label="Kind" cells={rows.map((r) => r.kind ?? "—")} />
           </tbody>
         </table>
-      </div>
-
-      {rows.length === 2 && (
-        <p className="mt-6 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
-          {tradeOffSentence(rows[0], rows[1])}
-        </p>
-      )}
+      </Card>
     </main>
   );
 }
@@ -183,10 +199,10 @@ function tradeOffSentence(a: CompareRow, b: CompareRow): string {
 
 function CompareRowTr({ label, cells }: { label: string; cells: React.ReactNode[] }) {
   return (
-    <tr className="border-t border-slate-200">
-      <th className="py-2 pr-2 text-left font-medium text-slate-600">{label}</th>
+    <tr className="border-t border-slate-100">
+      <th className="p-2 pr-3 text-left font-medium text-slate-600">{label}</th>
       {cells.map((c, i) => (
-        <td key={i} className="py-2 pr-4">
+        <td key={i} className="p-2 pr-4 text-ink">
           {c}
         </td>
       ))}

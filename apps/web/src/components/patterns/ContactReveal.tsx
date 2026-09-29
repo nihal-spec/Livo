@@ -46,13 +46,13 @@ export function ContactReveal({ placeId }: { placeId: string }) {
       <div className="text-sm">
         {state.phoneE164 && (
           <p>
-            Phone: <a href={`tel:${state.phoneE164}`} className="text-teal-800 underline">{state.phoneE164}</a>
+            Phone: <a href={`tel:${state.phoneE164}`} className="font-semibold text-brand-700 underline">{state.phoneE164}</a>
           </p>
         )}
         {state.whatsappE164 && (
           <p>
             WhatsApp:{" "}
-            <a href={`https://wa.me/${state.whatsappE164.replace("+", "")}`} className="text-teal-800 underline">
+            <a href={`https://wa.me/${state.whatsappE164.replace("+", "")}`} className="font-semibold text-brand-700 underline">
               {state.whatsappE164}
             </a>
           </p>
@@ -67,7 +67,7 @@ export function ContactReveal({ placeId }: { placeId: string }) {
         type="button"
         onClick={reveal}
         disabled={state.status === "loading"}
-        className="rounded-md border border-teal-700 px-3 py-1.5 text-sm font-medium text-teal-800 hover:bg-teal-50 disabled:opacity-60"
+        className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-brand-600 px-4 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-60"
       >
         {state.status === "loading" ? "Loading…" : "Show contact"}
       </button>

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Map as MapLibreMap, Marker, Popup } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
+import { MapPinOff } from "lucide-react";
 
 export interface MapMarker {
   id: string;
@@ -38,6 +39,14 @@ export function MapView({ markers, center }: { markers: MapMarker[]; center: { l
     if (!containerRef.current) return;
 
     let map: MapLibreMap | undefined;
+    // Tear the map down on failure, not just on unmount: otherwise its
+    // absolutely-positioned canvas outlives the container and floats over
+    // the page, swallowing clicks meant for the list.
+    const fail = () => {
+      map?.remove();
+      map = undefined;
+      setFailed(true);
+    };
     try {
       map = new MapLibreMap({
         container: containerRef.current,
@@ -57,7 +66,7 @@ export function MapView({ markers, center }: { markers: MapMarker[]; center: { l
         zoom: 13,
       });
 
-      map.on("error", () => setFailed(true));
+      map.on("error", fail);
 
       for (const marker of markers) {
         const popup = new Popup({ offset: 12 }).setHTML(
@@ -66,7 +75,7 @@ export function MapView({ markers, center }: { markers: MapMarker[]; center: { l
         new Marker({ color: "#0f766e" }).setLngLat([marker.lng, marker.lat]).setPopup(popup).addTo(map);
       }
     } catch {
-      setFailed(true);
+      fail();
     }
 
     return () => map?.remove();
@@ -74,13 +83,14 @@ export function MapView({ markers, center }: { markers: MapMarker[]; center: { l
 
   if (failed) {
     return (
-      <div className="flex h-full min-h-[240px] items-center justify-center rounded-lg border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-600">
-        Map unavailable right now — the list below still has everything.
+      <div key="map-fallback" className="flex h-full min-h-[240px] flex-col items-center justify-center gap-2 bg-slate-100 p-6 text-center text-sm text-slate-600">
+        <MapPinOff className="h-6 w-6 text-slate-400" aria-hidden />
+        Map unavailable right now — the list still has everything.
       </div>
     );
   }
 
-  return <div ref={containerRef} className="h-full min-h-[240px] w-full rounded-lg" data-testid="map-view" />;
+  return <div key="map" ref={containerRef} className="h-full min-h-[240px] w-full" data-testid="map-view" />;
 }
 
 function escapeHtml(s: string): string {

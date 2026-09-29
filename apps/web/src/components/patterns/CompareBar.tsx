@@ -24,12 +24,13 @@ export function CompareBar({ destinationId }: { destinationId: string }) {
   if (ids.length < 2) return null;
 
   return (
-    <div className="fixed inset-x-0 bottom-0 flex justify-center pb-4">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 flex justify-center pb-5">
       <Link
         href={`/compare?items=${ids.join(",")}&destinationId=${destinationId}`}
-        className="rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-lg hover:bg-slate-800"
+        className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-lift transition-transform hover:scale-[1.02] hover:bg-slate-800"
       >
         Compare ({ids.length})
+        <span aria-hidden>→</span>
       </Link>
     </div>
   );

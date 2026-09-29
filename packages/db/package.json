@@ -15,6 +15,7 @@
     "migrate:dev": "prisma migrate dev",
     "migrate:deploy": "prisma migrate deploy",
     "migrate:deploy:http": "node scripts/deploy-migrations-via-http.mjs",
+    "seed:sample:http": "node scripts/seed-sample-via-http.mjs",
     "seed": "tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",

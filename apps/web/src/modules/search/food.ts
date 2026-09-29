@@ -65,6 +65,7 @@ export async function searchFood(query: FoodSearchQuery): Promise<FoodSearchResp
       },
       distanceM: Math.round(c.distanceM),
       reasons,
+      isSample: c.isSample,
     };
   });
 

@@ -36,13 +36,13 @@ function Delta({ paise, label }: { paise: bigint; label: string }) {
  */
 export function ScenarioDelta({ lever, found, note, alternative, deltaMonthlyPaise, deltaUpfrontPaise }: ScenarioDeltaProps) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
       <p className="text-sm font-semibold text-slate-900">{LEVER_LABEL[lever] ?? lever}</p>
       <p className="mt-1 text-sm text-slate-600">{note}</p>
 
       {found && alternative && (
         <div className="mt-2 space-y-1 text-sm">
-          <Link href={`/p/${alternative.placeSlug}`} className="font-medium text-teal-800 hover:underline">
+          <Link href={`/p/${alternative.placeSlug}`} className="font-medium text-brand-700 hover:underline">
             {alternative.placeName}
           </Link>
           <div className="flex gap-4">
